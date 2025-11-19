@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "spinners web",
+    "name": "Spinners Web Kenya",
     "slug": "my-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -22,7 +22,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.kaiton254.myapp",
+      "package": "com.kaiton254.spinners_web",
       "permissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
