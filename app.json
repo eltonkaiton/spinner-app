@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "my-app",
+    "name": "spinners web",
     "slug": "my-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -24,6 +24,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-web-browser"
+    ]
   }
 }
