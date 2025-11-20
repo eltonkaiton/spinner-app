@@ -81,6 +81,38 @@ export default function OrderScreen({ route, navigation }) {
     filterOrders();
   }, [searchQuery, orders]);
 
+  // 🔹 Validate M-Pesa/Bank Transfer code
+  const validatePaymentCode = (code) => {
+    if (!code || code.length < 10) {
+      return {
+        isValid: false,
+        message: "Payment code must be at least 10 characters long"
+      };
+    }
+
+    // Check if contains both letters and numbers
+    const hasLetters = /[a-zA-Z]/.test(code);
+    const hasNumbers = /[0-9]/.test(code);
+
+    if (!hasLetters || !hasNumbers) {
+      return {
+        isValid: false,
+        message: "Payment code must contain both letters and numbers"
+      };
+    }
+
+    // Check for valid characters (only alphanumeric)
+    const isValidFormat = /^[a-zA-Z0-9]+$/.test(code);
+    if (!isValidFormat) {
+      return {
+        isValid: false,
+        message: "Payment code can only contain letters and numbers (no spaces or special characters)"
+      };
+    }
+
+    return { isValid: true, message: "Valid payment code" };
+  };
+
   const filterOrders = () => {
     if (!searchQuery.trim()) {
       setFilteredOrders(orders);
@@ -161,9 +193,18 @@ export default function OrderScreen({ route, navigation }) {
     }
 
     // Validate payment code for M-Pesa and Bank Transfer
-    if (["M-Pesa", "Bank Transfer"].includes(paymentMethod) && !paymentCode.trim()) {
-      Alert.alert("Payment Required", "Please enter your payment transaction code.");
-      return;
+    if (["M-Pesa", "Bank Transfer"].includes(paymentMethod)) {
+      if (!paymentCode.trim()) {
+        Alert.alert("Payment Required", "Please enter your payment transaction code.");
+        return;
+      }
+
+      // Validate payment code format
+      const validation = validatePaymentCode(paymentCode.trim());
+      if (!validation.isValid) {
+        Alert.alert("Invalid Payment Code", validation.message);
+        return;
+      }
     }
 
     // Validate user authentication
@@ -714,10 +755,19 @@ export default function OrderScreen({ route, navigation }) {
                   placeholder={`Enter your ${paymentMethod} transaction code (e.g., QWE123XYZ)`}
                   placeholderTextColor="#999"
                   autoCapitalize="characters"
+                  maxLength={20}
                 />
                 <Text style={styles.inputHint}>
-                  Required for {paymentMethod} payments
+                  Must be at least 10 characters with both letters and numbers
                 </Text>
+                {paymentCode.length > 0 && (
+                  <Text style={[
+                    styles.validationText,
+                    validatePaymentCode(paymentCode).isValid ? styles.validText : styles.invalidText
+                  ]}>
+                    {validatePaymentCode(paymentCode).message}
+                  </Text>
+                )}
               </View>
             )}
 
@@ -907,6 +957,17 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 4,
     fontStyle: "italic",
+  },
+  validationText: {
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  validText: {
+    color: "#28a745",
+  },
+  invalidText: {
+    color: "#dc3545",
   },
   textArea: {
     minHeight: 80,
