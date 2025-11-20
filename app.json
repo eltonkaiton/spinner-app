@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Spinners Web Kenya",
+    "name": "Spinners Web",
     "slug": "my-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -22,12 +22,13 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.kaiton254.spinners_web",
+      "package": "com.kaiton254.myapp",
       "permissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.INTERNET",
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -45,7 +46,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "7a1408cc-30dd-469d-bcb8-69f4f403ee31"
+        "projectId": "81b00ac4-0eaf-493f-a3d2-00f8687a647a"
       }
     },
     "owner": "kaiton254",
