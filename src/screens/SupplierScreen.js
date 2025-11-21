@@ -1,6 +1,6 @@
 // ./src/screens/SupplierScreen.js
 import React, { useState, useEffect, useContext } from "react";
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, Modal, ScrollView, RefreshControl, Animated, Dimensions, TextInput } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, Modal, ScrollView, RefreshControl, Dimensions, TextInput } from "react-native";
 import axios from "axios";
 import { AuthContext } from "../contexts/AuthContext";
 import { useNavigation } from "@react-navigation/native";
@@ -29,9 +29,6 @@ export default function SupplierScreen() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentNotes, setPaymentNotes] = useState("");
 
-  const sidebarAnimation = new Animated.Value(-width);
-  const overlayOpacity = new Animated.Value(0);
-
   useEffect(() => {
     if (searchQuery.trim() === "") {
       setFilteredOrders(orders);
@@ -50,20 +47,20 @@ export default function SupplierScreen() {
 
   const openSidebar = () => {
     setSidebarVisible(true);
-    Animated.parallel([
-      Animated.timing(sidebarAnimation, { toValue: 0, duration: 300, useNativeDriver: true }),
-      Animated.timing(overlayOpacity, { toValue: 1, duration: 300, useNativeDriver: true })
-    ]).start();
   };
 
   const closeSidebar = () => {
-    Animated.parallel([
-      Animated.timing(sidebarAnimation, { toValue: -width, duration: 300, useNativeDriver: true }),
-      Animated.timing(overlayOpacity, { toValue: 0, duration: 300, useNativeDriver: true })
-    ]).start(() => setSidebarVisible(false));
+    setSidebarVisible(false);
   };
 
-  const toggleSidebar = () => sidebarVisible ? closeSidebar() : openSidebar();
+  const toggleSidebar = () => {
+    if (sidebarVisible) {
+      closeSidebar();
+    } else {
+      openSidebar();
+    }
+  };
+
   const handleBackdropPress = () => closeSidebar();
   const handleLogout = async () => { closeSidebar(); await logout(); };
 
@@ -442,40 +439,46 @@ export default function SupplierScreen() {
       </View>
 
       {/* Sidebar */}
-      {sidebarVisible && <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}><TouchableOpacity style={styles.overlayTouchable} onPress={handleBackdropPress} activeOpacity={1}/></Animated.View>}
-      <Animated.View style={[styles.sidebar, { transform: [{ translateX: sidebarAnimation }], shadowOpacity: sidebarVisible ? 0.3 : 0 }]}>
-        <View style={styles.sidebarHeader}>
-          <View style={styles.sidebarUserInfo}>
-            <View style={styles.userAvatar}><Text style={styles.userAvatarText}>{user?.fullName?.charAt(0) || user?.email?.charAt(0) || 'S'}</Text></View>
-            <View style={styles.userDetails}>
-              <Text style={styles.userName}>{user?.fullName || 'Supplier'}</Text>
-              <Text style={styles.userEmail}>{user?.email}</Text>
-              <Text style={styles.userRole}>{user?.role}</Text>
+      {sidebarVisible && (
+        <View style={styles.overlay}>
+          <TouchableOpacity style={styles.overlayTouchable} onPress={handleBackdropPress} activeOpacity={1}/>
+        </View>
+      )}
+      {sidebarVisible && (
+        <View style={styles.sidebar}>
+          <View style={styles.sidebarHeader}>
+            <View style={styles.sidebarUserInfo}>
+              <View style={styles.userAvatar}><Text style={styles.userAvatarText}>{user?.fullName?.charAt(0) || user?.email?.charAt(0) || 'S'}</Text></View>
+              <View style={styles.userDetails}>
+                <Text style={styles.userName}>{user?.fullName || 'Supplier'}</Text>
+                <Text style={styles.userEmail}>{user?.email}</Text>
+                <Text style={styles.userRole}>{user?.role}</Text>
+              </View>
             </View>
+            <TouchableOpacity onPress={closeSidebar} style={styles.closeSidebarButton}><Text style={styles.closeSidebarText}>×</Text></TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={closeSidebar} style={styles.closeSidebarButton}><Text style={styles.closeSidebarText}>×</Text></TouchableOpacity>
+          <ScrollView style={styles.sidebarContent} showsVerticalScrollIndicator={false} contentContainerStyle={styles.sidebarContentContainer}>
+            {[['MAIN MENU', [['📊','Dashboard'],['📦','Orders']]], ['SUPPORT', [['ℹ️','About'],['❓','Help'],['📞','Contact']]]].map(([title, items], idx) => (
+              <View key={idx} style={styles.sidebarSection}>
+                <Text style={styles.sidebarSectionTitle}>{title}</Text>
+                {items.map(([icon, text], i) => (
+                  <TouchableOpacity key={i} style={styles.sidebarItem} onPress={() => navigateToScreen(text)}>
+                    <Text style={styles.sidebarIcon}>{icon}</Text>
+                    <Text style={styles.sidebarText}>{text}</Text>
+                    {text === 'Orders' && <View style={styles.orderBadge}><Text style={styles.orderBadgeText}>{orders.length}</Text></View>}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ))}
+          </ScrollView>
+          <View style={styles.sidebarFooter}>
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Text style={styles.logoutIcon}>🚪</Text>
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <ScrollView style={styles.sidebarContent} showsVerticalScrollIndicator={false} contentContainerStyle={styles.sidebarContentContainer}>
-          {[['MAIN MENU', [['📊','Dashboard'],['📦','Orders']]], ['SUPPORT', [['ℹ️','About'],['❓','Help'],['📞','Contact']]]].map(([title, items], idx) => (
-            <View key={idx} style={styles.sidebarSection}>
-              <Text style={styles.sidebarSectionTitle}>{title}</Text>
-              {items.map(([icon, text], i) => (
-                <TouchableOpacity key={i} style={styles.sidebarItem} onPress={() => navigateToScreen(text)}>
-                  <Text style={styles.sidebarIcon}>{icon}</Text>
-                  <Text style={styles.sidebarText}>{text}</Text>
-                  {text === 'Orders' && <View style={styles.orderBadge}><Text style={styles.orderBadgeText}>{orders.length}</Text></View>}
-                </TouchableOpacity>
-              ))}
-            </View>
-          ))}
-        </ScrollView>
-        <View style={styles.sidebarFooter}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutIcon}>🚪</Text>
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
+      )}
 
       {/* Search */}
       <View style={styles.searchContainer}>

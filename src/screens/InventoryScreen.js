@@ -10,12 +10,15 @@ import {
   Alert,
   ScrollView,
   RefreshControl,
+  Dimensions,
+  SafeAreaView,
 } from 'react-native';
 import axios from 'axios';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../contexts/AuthContext';
 
 const API_URL = 'https://spinners-backend-1.onrender.com/api/inventory';
+const { width, height } = Dimensions.get('window');
 
 export default function InventoryScreen() {
   const navigation = useNavigation();
@@ -104,543 +107,724 @@ export default function InventoryScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      {/* Sidebar */}
-      {sidebarOpen && (
-        <View style={styles.sidebar}>
-          <View style={styles.sidebarHeader}>
-            <Text style={styles.sidebarTitle}>Menu</Text>
-          </View>
-
-          <ScrollView style={styles.menuContainer}>
-            <TouchableOpacity
-              style={[styles.menuItem, styles.activeMenuItem]}
-              onPress={() => {
-                setSidebarOpen(false);
-              }}
-            >
-              <Text style={styles.menuText}>🛒 Products</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                navigation.navigate('AddProduct');
-                setSidebarOpen(false);
-              }}
-            >
-              <Text style={styles.menuText}>➕ Add Product</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                navigation.navigate('AdminOrders');
-                setSidebarOpen(false);
-              }}
-            >
-              <Text style={styles.menuText}>📦 Orders</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                navigation.navigate('InventoryOrder');
-                setSidebarOpen(false);
-              }}
-            >
-              <Text style={styles.menuText}>📝 Order Products</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                navigation.navigate('Help');
-                setSidebarOpen(false);
-              }}
-            >
-              <Text style={styles.menuText}>❓ Help</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                navigation.navigate('About');
-                setSidebarOpen(false);
-              }}
-            >
-              <Text style={styles.menuText}>ℹ️ About Us</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                navigation.navigate('Contact');
-                setSidebarOpen(false);
-              }}
-            >
-              <Text style={styles.menuText}>📞 Contact Us</Text>
-            </TouchableOpacity>
-          </ScrollView>
-
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutText}>🚪 Logout</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Main Content */}
-      <View style={styles.mainContent}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.menuButton}
-            onPress={() => setSidebarOpen(!sidebarOpen)}
-          >
-            <Text style={styles.menuButtonText}>{sidebarOpen ? '✕' : '☰'}</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Inventory Management</Text>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => navigation.navigate('AddProduct')}
-          >
-            <Text style={styles.addButtonText}>+ Add New</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search products..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Sidebar Overlay */}
+        {sidebarOpen && (
+          <TouchableOpacity 
+            style={styles.overlay}
+            activeOpacity={1}
+            onPress={() => setSidebarOpen(false)}
           />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              style={styles.clearSearchButton}
-              onPress={() => setSearchQuery('')}
-            >
-              <Text style={styles.clearSearchText}>✕</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        )}
 
-        {/* Stats Overview */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{filteredProducts.length}</Text>
-            <Text style={styles.statLabel}>Total Products</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>
-              {filteredProducts.filter((p) => p.quantity > 0).length}
-            </Text>
-            <Text style={styles.statLabel}>In Stock</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>
-              {filteredProducts.filter((p) => p.quantity === 0).length}
-            </Text>
-            <Text style={styles.statLabel}>Out of Stock</Text>
-          </View>
-        </View>
-
-        {/* Product List */}
-        <View style={styles.content}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              📋 {searchQuery ? 'Search Results' : 'Products in Stock'}
-              {searchQuery && ` (${filteredProducts.length})`}
-            </Text>
-            <TouchableOpacity onPress={fetchProducts} style={styles.refreshButton}>
-              <Text style={styles.refreshText}>🔄 Refresh</Text>
-            </TouchableOpacity>
-          </View>
-
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Loading products...</Text>
+        {/* Sidebar */}
+        {sidebarOpen && (
+          <View style={styles.sidebar}>
+            <View style={styles.sidebarHeader}>
+              <View style={styles.userInfo}>
+                <View style={styles.userAvatar}>
+                  <Text style={styles.userAvatarText}>
+                    {user?.fullName?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                  </Text>
+                </View>
+                <View style={styles.userDetails}>
+                  <Text style={styles.userName}>{user?.fullName || 'User'}</Text>
+                  <Text style={styles.userEmail}>{user?.email}</Text>
+                  <Text style={styles.userRole}>{user?.role}</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.closeSidebarButton}
+                onPress={() => setSidebarOpen(false)}
+              >
+                <Text style={styles.closeSidebarText}>✕</Text>
+              </TouchableOpacity>
             </View>
-          ) : filteredProducts.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>
-                {searchQuery ? 'No products found' : 'No products available'}
-              </Text>
-              <Text style={styles.emptyStateSubtext}>
-                {searchQuery 
-                  ? 'Try a different search term' 
-                  : 'Add your first product to get started'
-                }
-              </Text>
-              {!searchQuery && (
+
+            <ScrollView style={styles.menuContainer} showsVerticalScrollIndicator={false}>
+              <View style={styles.menuSection}>
+                <Text style={styles.menuSectionTitle}>MAIN MENU</Text>
                 <TouchableOpacity
-                  style={styles.emptyStateButton}
-                  onPress={() => navigation.navigate('AddProduct')}
+                  style={[styles.menuItem, styles.activeMenuItem]}
+                  onPress={() => setSidebarOpen(false)}
                 >
-                  <Text style={styles.emptyStateButtonText}>Add Product</Text>
+                  <Text style={styles.menuIcon}>🛒</Text>
+                  <Text style={styles.menuText}>Products</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    navigation.navigate('AddProduct');
+                    setSidebarOpen(false);
+                  }}
+                >
+                  <Text style={styles.menuIcon}>➕</Text>
+                  <Text style={styles.menuText}>Add Product</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    navigation.navigate('AdminOrders');
+                    setSidebarOpen(false);
+                  }}
+                >
+                  <Text style={styles.menuIcon}>📦</Text>
+                  <Text style={styles.menuText}>Orders</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    navigation.navigate('InventoryOrder');
+                    setSidebarOpen(false);
+                  }}
+                >
+                  <Text style={styles.menuIcon}>📝</Text>
+                  <Text style={styles.menuText}>Order Products</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.menuSection}>
+                <Text style={styles.menuSectionTitle}>SUPPORT</Text>
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    navigation.navigate('Help');
+                    setSidebarOpen(false);
+                  }}
+                >
+                  <Text style={styles.menuIcon}>❓</Text>
+                  <Text style={styles.menuText}>Help</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    navigation.navigate('About');
+                    setSidebarOpen(false);
+                  }}
+                >
+                  <Text style={styles.menuIcon}>ℹ️</Text>
+                  <Text style={styles.menuText}>About Us</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    navigation.navigate('Contact');
+                    setSidebarOpen(false);
+                  }}
+                >
+                  <Text style={styles.menuIcon}>📞</Text>
+                  <Text style={styles.menuText}>Contact Us</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+
+            <View style={styles.sidebarFooter}>
+              <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                <Text style={styles.logoutIcon}>🚪</Text>
+                <Text style={styles.logoutText}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Main Content */}
+        <View style={styles.mainContent}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.menuButton}
+              onPress={() => setSidebarOpen(!sidebarOpen)}
+            >
+              <Text style={styles.menuButtonText}>☰</Text>
+            </TouchableOpacity>
+            <View style={styles.headerContent}>
+              <Text style={styles.headerTitle}>Inventory Management</Text>
+              <Text style={styles.headerSubtitle}>Manage your products</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => navigation.navigate('AddProduct')}
+            >
+              <Text style={styles.addButtonText}>+ Add New</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputContainer}>
+              <Text style={styles.searchIcon}>🔍</Text>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search products..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#94a3b8"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  style={styles.clearSearchButton}
+                  onPress={() => setSearchQuery('')}
+                >
+                  <Text style={styles.clearSearchText}>✕</Text>
                 </TouchableOpacity>
               )}
             </View>
-          ) : (
-            <FlatList
-              data={filteredProducts}
-              keyExtractor={(item) => item._id}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={onRefresh}
-                  colors={['#1a3a8f']}
-                />
-              }
-              showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => {
-                const stockStatus = getStockStatus(item.quantity);
-                return (
-                  <View style={styles.productCard}>
-                    <View style={styles.productInfo}>
-                      <Text style={styles.productName}>{item.name}</Text>
-                      {item.description ? (
-                        <Text style={styles.productDescription} numberOfLines={2}>
-                          {item.description}
-                        </Text>
-                      ) : null}
-                      <View style={styles.productDetails}>
-                        <Text style={styles.productPrice}>KES {item.price}</Text>
-                        <Text style={styles.productQuantity}>Qty: {item.quantity}</Text>
+          </View>
+
+          {/* Stats Overview */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{filteredProducts.length}</Text>
+              <Text style={styles.statLabel}>Total Products</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>
+                {filteredProducts.filter((p) => p.quantity > 0).length}
+              </Text>
+              <Text style={styles.statLabel}>In Stock</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>
+                {filteredProducts.filter((p) => p.quantity === 0).length}
+              </Text>
+              <Text style={styles.statLabel}>Out of Stock</Text>
+            </View>
+          </View>
+
+          {/* Product List */}
+          <View style={styles.content}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                {searchQuery ? `Search Results (${filteredProducts.length})` : 'All Products'}
+              </Text>
+              <TouchableOpacity onPress={fetchProducts} style={styles.refreshButton}>
+                <Text style={styles.refreshText}>🔄 Refresh</Text>
+              </TouchableOpacity>
+            </View>
+
+            {loading && products.length === 0 ? (
+              <View style={styles.centerContainer}>
+                <Text style={styles.loadingText}>Loading products...</Text>
+              </View>
+            ) : filteredProducts.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateTitle}>
+                  {searchQuery ? 'No products found' : 'No products available'}
+                </Text>
+                <Text style={styles.emptyStateSubtext}>
+                  {searchQuery 
+                    ? 'Try a different search term' 
+                    : 'Add your first product to get started'
+                  }
+                </Text>
+                {!searchQuery && (
+                  <TouchableOpacity
+                    style={styles.emptyStateButton}
+                    onPress={() => navigation.navigate('AddProduct')}
+                  >
+                    <Text style={styles.emptyStateButtonText}>Add Product</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <FlatList
+                data={filteredProducts}
+                keyExtractor={(item) => item._id}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={['#1a3a8f']}
+                  />
+                }
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item }) => {
+                  const stockStatus = getStockStatus(item.quantity);
+                  return (
+                    <View style={styles.productCard}>
+                      <View style={styles.productInfo}>
+                        <Text style={styles.productName}>{item.name}</Text>
+                        {item.description ? (
+                          <Text style={styles.productDescription} numberOfLines={2}>
+                            {item.description}
+                          </Text>
+                        ) : null}
+                        <View style={styles.productDetails}>
+                          <Text style={styles.productPrice}>KES {item.price}</Text>
+                          <Text style={styles.productQuantity}>Qty: {item.quantity}</Text>
+                        </View>
+                        <View
+                          style={[styles.stockBadge, { backgroundColor: stockStatus.color }]}
+                        >
+                          <Text style={styles.stockText}>{stockStatus.status}</Text>
+                        </View>
                       </View>
-                      <View
-                        style={[styles.stockBadge, { backgroundColor: stockStatus.color }]}
-                      >
-                        <Text style={styles.stockText}>{stockStatus.status}</Text>
+                      <View style={styles.productActions}>
+                        <TouchableOpacity
+                          style={styles.editButton}
+                          onPress={() => navigation.navigate('EditProduct', { product: item })}
+                        >
+                          <Text style={styles.editButtonText}>Edit</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.deleteButton}
+                          onPress={() => handleDelete(item._id)}
+                        >
+                          <Text style={styles.deleteButtonText}>Delete</Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
-                    <View style={styles.productActions}>
-                      <TouchableOpacity
-                        style={styles.editButton}
-                        onPress={() => navigation.navigate('EditProduct', { product: item })}
-                      >
-                        <Text style={styles.editButtonText}>Edit</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.deleteButton}
-                        onPress={() => handleDelete(item._id)}
-                      >
-                        <Text style={styles.deleteButtonText}>Delete</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                );
-              }}
-              contentContainerStyle={styles.listContainer}
-            />
-          )}
+                  );
+                }}
+                contentContainerStyle={styles.listContainer}
+              />
+            )}
+          </View>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 // --------------------------- Styles ---------------------------
 const styles = StyleSheet.create({
-  container: { flex: 1, flexDirection: 'row', backgroundColor: '#f8fafc' },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 998,
+  },
   sidebar: {
-    width: 280,
-    backgroundColor: '#1a3a8f',
-    paddingTop: 60,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: width * 0.82,
+    backgroundColor: '#fff',
+    zIndex: 999,
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 20,
+    borderRightWidth: 1,
+    borderRightColor: '#e2e8f0',
+  },
+  sidebarHeader: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: 25,
+    paddingTop: 60,
+    backgroundColor: '#065f46',
+    borderBottomWidth: 1,
+    borderBottomColor: '#047857',
   },
-  sidebarHeader: { 
-    paddingHorizontal: 20, 
-    paddingBottom: 20, 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#2d4ba8' 
-  },
-  sidebarTitle: { 
-    color: '#fff', 
-    fontWeight: 'bold', 
-    fontSize: 20 
-  },
-  menuContainer: { 
-    flex: 1, 
-    paddingHorizontal: 15, 
-    paddingTop: 20 
-  },
-  menuItem: { 
-    backgroundColor: 'transparent', 
-    paddingVertical: 15, 
-    paddingHorizontal: 15, 
-    marginBottom: 5, 
-    borderRadius: 10 
-  },
-  activeMenuItem: { 
-    backgroundColor: '#2d4ba8' 
-  },
-  menuText: { 
-    color: '#fff', 
-    fontSize: 16, 
-    fontWeight: '500' 
-  },
-  logoutButton: { 
-    backgroundColor: '#ffdddd', 
-    margin: 15, 
-    paddingVertical: 15, 
-    borderRadius: 10, 
-    alignItems: 'center' 
-  },
-  logoutText: { 
-    color: '#d32f2f', 
-    fontWeight: 'bold', 
-    fontSize: 16 
-  },
-  mainContent: { 
-    flex: 1 
-  },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    backgroundColor: '#fff', 
-    paddingHorizontal: 20, 
-    paddingVertical: 15, 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#e2e8f0', 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 2 }, 
-    shadowOpacity: 0.1, 
-    shadowRadius: 3, 
-    elevation: 3 
-  },
-  menuButton: { 
-    padding: 8, 
-    borderRadius: 8, 
-    backgroundColor: '#f1f5f9' 
-  },
-  menuButtonText: { 
-    fontSize: 18, 
-    fontWeight: 'bold', 
-    color: '#1a3a8f' 
-  },
-  headerTitle: { 
-    fontSize: 20, 
-    fontWeight: 'bold', 
-    color: '#1e293b' 
-  },
-  addButton: { 
-    backgroundColor: '#1a3a8f', 
-    paddingHorizontal: 16, 
-    paddingVertical: 8, 
-    borderRadius: 8 
-  },
-  addButtonText: { 
-    color: '#fff', 
-    fontWeight: '600', 
-    fontSize: 14 
-  },
-  searchContainer: {
+  userInfo: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  userAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#059669',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  userAvatarText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  userDetails: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 2,
+  },
+  userEmail: {
+    fontSize: 12,
+    color: '#d1fae5',
+    marginBottom: 2,
+  },
+  userRole: {
+    fontSize: 11,
+    color: '#a7f3d0',
+    fontStyle: 'italic',
+  },
+  closeSidebarButton: {
+    padding: 8,
+    marginLeft: 10,
+  },
+  closeSidebarText: {
+    fontSize: 24,
+    color: '#fff',
+    fontWeight: '300',
+  },
+  menuContainer: {
+    flex: 1,
+    paddingBottom: 20,
+  },
+  menuSection: {
+    marginTop: 20,
+  },
+  menuSectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748b',
+    marginBottom: 8,
+    marginHorizontal: 25,
+    letterSpacing: 1,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 25,
+    marginHorizontal: 10,
+    marginVertical: 2,
+    borderRadius: 10,
+    backgroundColor: 'transparent',
+  },
+  activeMenuItem: {
+    backgroundColor: '#f0f9ff',
+    borderLeftWidth: 4,
+    borderLeftColor: '#1a3a8f',
+  },
+  menuIcon: {
+    fontSize: 18,
+    marginRight: 15,
+    width: 24,
+    textAlign: 'center',
+  },
+  menuText: {
+    fontSize: 15,
+    color: '#374151',
+    fontWeight: '500',
+    flex: 1,
+  },
+  sidebarFooter: {
+    padding: 25,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    backgroundColor: '#f8fafc',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#fef2f2',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  logoutIcon: {
+    fontSize: 16,
+    marginRight: 12,
+  },
+  logoutText: {
+    fontSize: 15,
+    color: '#dc2626',
+    fontWeight: '600',
+  },
+  mainContent: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 15,
+    paddingBottom: 15,
     backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginTop: 16,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  menuButton: {
+    padding: 10,
+    marginRight: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 8,
+  },
+  menuButtonText: {
+    fontSize: 18,
+    color: '#1a3a8f',
+    fontWeight: 'bold',
+  },
+  headerContent: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  addButton: {
+    backgroundColor: '#1a3a8f',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  searchContainer: {
+    padding: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
     borderColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+  },
+  searchIcon: {
+    fontSize: 16,
+    color: '#64748b',
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 12,
-    fontSize: 16,
+    height: 44,
+    fontSize: 14,
     color: '#1e293b',
   },
   clearSearchButton: {
-    padding: 4,
+    padding: 8,
   },
   clearSearchText: {
     fontSize: 16,
     color: '#64748b',
     fontWeight: 'bold',
   },
-  statsContainer: { 
-    flexDirection: 'row', 
-    padding: 16, 
-    backgroundColor: '#fff', 
-    marginHorizontal: 16, 
-    marginTop: 16, 
-    borderRadius: 12, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 1 }, 
-    shadowOpacity: 0.1, 
-    shadowRadius: 3, 
-    elevation: 2 
+  statsContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
   },
-  statCard: { 
-    flex: 1, 
-    alignItems: 'center', 
-    padding: 10 
+  statCard: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#f8fafc',
+    marginHorizontal: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
-  statNumber: { 
-    fontSize: 24, 
-    fontWeight: 'bold', 
-    color: '#1a3a8f', 
-    marginBottom: 4 
+  statNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#059669',
   },
-  statLabel: { 
-    fontSize: 12, 
-    color: '#64748b', 
-    fontWeight: '500' 
+  statLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 4,
+    textAlign: 'center',
   },
-  content: { 
-    flex: 1, 
-    padding: 16 
+  content: {
+    flex: 1,
+    padding: 16,
   },
-  sectionHeader: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: 16 
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  sectionTitle: { 
-    fontSize: 18, 
-    fontWeight: 'bold', 
-    color: '#1e293b' 
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1e293b',
   },
-  refreshButton: { 
-    backgroundColor: '#f1f5f9', 
-    paddingHorizontal: 12, 
-    paddingVertical: 6, 
-    borderRadius: 6 
+  refreshButton: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
   },
-  refreshText: { 
-    color: '#475569', 
-    fontSize: 12, 
-    fontWeight: '500' 
+  refreshText: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '500',
   },
-  loadingContainer: { 
-    padding: 40, 
-    alignItems: 'center' 
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
-  loadingText: { 
-    color: '#64748b', 
-    fontSize: 16 
+  loadingText: {
+    marginTop: 12,
+    color: '#64748b',
+    fontSize: 14,
+    textAlign: 'center',
   },
-  emptyState: { 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    padding: 40, 
-    backgroundColor: '#fff', 
-    borderRadius: 12, 
-    marginTop: 20 
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginTop: 20,
   },
-  emptyStateText: { 
-    fontSize: 18, 
-    fontWeight: 'bold', 
-    color: '#475569', 
-    marginBottom: 8 
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#475569',
+    marginBottom: 8,
+    textAlign: 'center',
   },
-  emptyStateSubtext: { 
-    fontSize: 14, 
-    color: '#94a3b8', 
-    textAlign: 'center', 
-    marginBottom: 20 
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#94a3b8',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 20,
   },
-  emptyStateButton: { 
-    backgroundColor: '#1a3a8f', 
-    paddingHorizontal: 24, 
-    paddingVertical: 12, 
-    borderRadius: 8 
+  emptyStateButton: {
+    backgroundColor: '#1a3a8f',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
   },
-  emptyStateButtonText: { 
-    color: '#fff', 
-    fontWeight: '600', 
-    fontSize: 14 
+  emptyStateButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
-  listContainer: { 
-    paddingBottom: 20 
+  listContainer: {
+    paddingBottom: 20,
   },
-  productCard: { 
-    backgroundColor: '#fff', 
-    padding: 16, 
-    borderRadius: 12, 
-    marginBottom: 12, 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'flex-start', 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 1 }, 
-    shadowOpacity: 0.1, 
-    shadowRadius: 3, 
-    elevation: 2, 
-    borderLeftWidth: 4, 
-    borderLeftColor: '#1a3a8f' 
+  productCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+    borderLeftWidth: 4,
+    borderLeftColor: '#1a3a8f',
   },
-  productInfo: { 
-    flex: 1, 
-    marginRight: 12 
+  productInfo: {
+    flex: 1,
+    marginBottom: 12,
   },
-  productName: { 
-    fontSize: 16, 
-    fontWeight: 'bold', 
-    color: '#1e293b', 
-    marginBottom: 4 
+  productName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 4,
   },
-  productDescription: { 
-    fontSize: 14, 
-    color: '#64748b', 
-    marginBottom: 8, 
-    lineHeight: 18 
+  productDescription: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 8,
+    lineHeight: 18,
   },
-  productDetails: { 
-    flexDirection: 'row', 
-    marginBottom: 8 
+  productDetails: {
+    flexDirection: 'row',
+    marginBottom: 8,
   },
-  productPrice: { 
-    fontSize: 15, 
-    fontWeight: '600', 
-    color: '#1a3a8f', 
-    marginRight: 16 
+  productPrice: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1a3a8f',
+    marginRight: 16,
   },
-  productQuantity: { 
-    fontSize: 14, 
-    color: '#475569', 
-    fontWeight: '500' 
+  productQuantity: {
+    fontSize: 14,
+    color: '#475569',
+    fontWeight: '500',
   },
-  stockBadge: { 
-    alignSelf: 'flex-start', 
-    paddingHorizontal: 8, 
-    paddingVertical: 4, 
-    borderRadius: 12 
+  stockBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  stockText: { 
-    color: '#fff', 
-    fontSize: 11, 
-    fontWeight: '600' 
+  stockText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
   },
-  productActions: { 
-    flexDirection: 'row' 
+  productActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
-  editButton: { 
-    backgroundColor: '#dbeafe', 
-    paddingHorizontal: 12, 
-    paddingVertical: 6, 
-    borderRadius: 6, 
-    marginRight: 8 
+  editButton: {
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginRight: 8,
+    minWidth: 60,
+    alignItems: 'center',
   },
-  editButtonText: { 
-    color: '#1a3a8f', 
-    fontSize: 12, 
-    fontWeight: '600' 
+  editButtonText: {
+    color: '#1a3a8f',
+    fontSize: 12,
+    fontWeight: '600',
   },
-  deleteButton: { 
-    backgroundColor: '#fee2e2', 
-    paddingHorizontal: 12, 
-    paddingVertical: 6, 
-    borderRadius: 6 
+  deleteButton: {
+    backgroundColor: '#fee2e2',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    minWidth: 60,
+    alignItems: 'center',
   },
-  deleteButtonText: { 
-    color: '#dc2626', 
-    fontSize: 12, 
-    fontWeight: '600' 
+  deleteButtonText: {
+    color: '#dc2626',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -18,7 +18,7 @@ import * as Sharing from "expo-sharing";
 const API_URL = "https://spinners-backend-1.onrender.com/api/orders"; // Fetch all orders
 const UPDATE_STATUS_URL = "https://spinners-backend-1.onrender.com/api/orders/update-status"; // Update order status
 
-export default function AdminOrdersScreen() {
+export default function AdminOrdersScreen({ navigation }) {
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -147,6 +147,39 @@ export default function AdminOrdersScreen() {
     setFilteredOrders(filtered);
   };
 
+  const handleGoBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      // Fallback if there's no previous screen
+      Alert.alert("Info", "No previous screen available");
+    }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Confirm Logout",
+      "Are you sure you want to logout?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Logout",
+          style: "destructive",
+          onPress: () => {
+            // Navigate to Auth navigator which contains LoginScreen
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Auth" }],
+            });
+          }
+        }
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -195,16 +228,24 @@ export default function AdminOrdersScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.headerWrap}>
-        <Text style={styles.header}>All Orders</Text>
-        <TouchableOpacity
-          style={styles.receiptBtn}
-          onPress={generateReceipt}
-          disabled={generating}
-        >
-          <Text style={styles.receiptText}>
-            {generating ? "Generating..." : "Generate Receipt"}
-          </Text>
+        <TouchableOpacity style={styles.backBtn} onPress={handleGoBack}>
+          <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
+        <Text style={styles.header}>All Orders</Text>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.receiptBtn}
+            onPress={generateReceipt}
+            disabled={generating}
+          >
+            <Text style={styles.receiptText}>
+              {generating ? "Generating..." : "Receipt"}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Search Bar */}
@@ -290,7 +331,27 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: "#ddd",
   },
-  header: { fontSize: 20, fontWeight: "700", color: "#1a3a8f" },
+  backBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  backText: {
+    fontSize: 16,
+    color: "#1a3a8f",
+    fontWeight: "600",
+  },
+  header: { 
+    fontSize: 20, 
+    fontWeight: "700", 
+    color: "#1a3a8f",
+    flex: 1,
+    textAlign: "center",
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   receiptBtn: {
     backgroundColor: "#1a3a8f",
     paddingHorizontal: 12,
@@ -298,6 +359,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   receiptText: { color: "#fff", fontWeight: "600" },
+  logoutBtn: {
+    backgroundColor: "#c0392b",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  logoutText: { color: "#fff", fontWeight: "600" },
   searchContainer: {
     paddingHorizontal: 12,
     paddingVertical: 8,
