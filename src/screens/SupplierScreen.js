@@ -23,6 +23,7 @@ export default function SupplierScreen() {
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showPaymentConfirmationModal, setShowPaymentConfirmationModal] = useState(false);
+  const [showPaymentReceiptModal, setShowPaymentReceiptModal] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [generatingReceipt, setGeneratingReceipt] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -233,6 +234,29 @@ export default function SupplierScreen() {
     }
   };
 
+  // FIXED: Supplier confirm payment receipt after finance approval
+  const confirmPaymentReceipt = async (orderId) => {
+    try {
+      setLoading(true);
+      
+      // Use the existing update-payment-status endpoint with "received" status
+      const response = await axios.put(`${API_BASE_URL}/orders/update-payment-status/${orderId}`,
+        { paymentStatus: "received" },
+        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+      );
+      
+      Alert.alert("Success", "Payment receipt confirmed!");
+      loadData();
+      setShowPaymentReceiptModal(false);
+      setShowOrderDetails(false);
+    } catch (err) {
+      console.error("❌ Confirm payment receipt error:", err.response?.data);
+      Alert.alert("Error", err.response?.data?.message || "Failed to confirm payment receipt. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const generateReceipt = async (order) => {
     try {
       setGeneratingReceipt(true);
@@ -297,6 +321,7 @@ export default function SupplierScreen() {
       'approved': '#22c55e',
       'pending': '#f59e0b',
       'rejected': '#ef4444',
+      'received': '#059669',
     };
     return colors[status?.toLowerCase()] || '#6b7280';
   };
@@ -310,9 +335,18 @@ export default function SupplierScreen() {
     
     // Only allow payment submission for delivered/received orders that don't have pending payment
     const validStatus = ['delivered', 'received', 'completed'].includes(status);
-    const noPendingPayment = paymentStatus !== 'pending' || order.totalPrice <= 0;
+    const noPendingPayment = paymentStatus !== 'pending' && paymentStatus !== 'paid' && paymentStatus !== 'received';
     
-    return validStatus && noPendingPayment;
+    return validStatus && noPendingPayment && order.totalPrice > 0;
+  };
+
+  // NEW: Check if supplier can confirm payment receipt (after finance approves payment)
+  const canConfirmPaymentReceipt = (order) => {
+    const paymentStatus = order.paymentStatus?.toLowerCase();
+    const userRole = user?.role;
+    
+    // Only suppliers can confirm payment receipt, and only for orders with paid payment status
+    return userRole === 'supplier' && paymentStatus === 'paid' && order.totalPrice > 0;
   };
 
   // NEW: Check if supervisor can confirm payment
@@ -366,13 +400,22 @@ export default function SupplierScreen() {
       });
     }
 
+    // NEW: Add supplier payment receipt confirmation button
+    if (canConfirmPaymentReceipt(order)) {
+      statusButtons.push({
+        text: '💰 Confirm Receipt',
+        style: styles.confirmReceiptButton,
+        action: () => { setSelectedOrder(order); setShowPaymentReceiptModal(true); }
+      });
+    }
+
     if (!statusButtons.length) return null;
 
     return (
       <View style={styles.actionButtons}>
         {statusButtons.map((btn, index) => (
           <TouchableOpacity key={index} style={[styles.actionButton, btn.style]} onPress={btn.action} disabled={loading}>
-            <Text style={styles.actionButtonText}>{loading && !btn.text.includes('📄') && !btn.text.includes('✅') ? '...' : btn.text}</Text>
+            <Text style={styles.actionButtonText}>{loading && !btn.text.includes('📄') && !btn.text.includes('✅') && !btn.text.includes('💰') ? '...' : btn.text}</Text>
           </TouchableOpacity>
         ))}
         
@@ -384,7 +427,10 @@ export default function SupplierScreen() {
           <Text style={styles.paymentApprovedText}>✅ Payment Approved</Text>
         )}
         {paymentStatus === 'paid' && (
-          <Text style={styles.paymentPaidText}>💳 Payment Received</Text>
+          <Text style={styles.paymentPaidText}>💳 Payment Ready for Receipt</Text>
+        )}
+        {paymentStatus === 'received' && (
+          <Text style={styles.paymentReceivedText}>🎉 Payment Received</Text>
         )}
       </View>
     );
@@ -715,7 +761,7 @@ export default function SupplierScreen() {
         </View>
       </Modal>
 
-      {/* NEW: Payment Confirmation Modal for Supervisor */}
+      {/* Payment Confirmation Modal for Supervisor */}
       <Modal visible={showPaymentConfirmationModal} animationType="fade" transparent={true}>
         <View style={styles.confirmationModal}>
           <View style={styles.confirmationContent}>
@@ -735,6 +781,32 @@ export default function SupplierScreen() {
               </TouchableOpacity>
               <TouchableOpacity style={[styles.confirmationButton, styles.confirmPaymentButton]} onPress={() => confirmPaymentReceived(selectedOrder?._id)} disabled={loading}>
                 {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.confirmButtonText}>Confirm Payment</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* NEW: Payment Receipt Confirmation Modal for Supplier */}
+      <Modal visible={showPaymentReceiptModal} animationType="fade" transparent={true}>
+        <View style={styles.confirmationModal}>
+          <View style={styles.confirmationContent}>
+            <Text style={styles.confirmationTitle}>Confirm Payment Receipt</Text>
+            <Text style={styles.confirmationText}>Are you sure you want to confirm that you have received the payment for this order?</Text>
+            {selectedOrder && (
+              <View style={styles.paymentConfirmationSummary}>
+                <Text style={styles.paymentConfirmationItem}>Order: {selectedOrder._id}</Text>
+                <Text style={styles.paymentConfirmationItem}>Product: {selectedOrder.productId?.name}</Text>
+                <Text style={styles.paymentConfirmationItem}>Amount: KSH {selectedOrder.totalPrice}</Text>
+                <Text style={styles.paymentConfirmationItem}>Supplier: {user?.fullName}</Text>
+              </View>
+            )}
+            <View style={styles.confirmationButtons}>
+              <TouchableOpacity style={[styles.confirmationButton, styles.cancelButton]} onPress={() => setShowPaymentReceiptModal(false)} disabled={loading}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.confirmationButton, styles.confirmReceiptButton]} onPress={() => confirmPaymentReceipt(selectedOrder?._id)} disabled={loading}>
+                {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.confirmButtonText}>Confirm Receipt</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -830,9 +902,11 @@ const styles = StyleSheet.create({
   receiptButton: { backgroundColor: '#6366f1' }, 
   paymentButton: { backgroundColor: '#f59e0b' },
   confirmPaymentButton: { backgroundColor: '#10b981' },
+  confirmReceiptButton: { backgroundColor: '#22c55e' },
   paymentPendingText: { fontSize: 12, fontWeight: '600', color: '#f59e0b', textAlign: 'center', flex: 1 },
   paymentApprovedText: { fontSize: 12, fontWeight: '600', color: '#22c55e', textAlign: 'center', flex: 1 },
   paymentPaidText: { fontSize: 12, fontWeight: '600', color: '#10b981', textAlign: 'center', flex: 1 },
+  paymentReceivedText: { fontSize: 12, fontWeight: '600', color: '#059669', textAlign: 'center', flex: 1 },
   modalContainer: { flex: 1, backgroundColor: '#f8fafc' }, 
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 60, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1e293b' }, 
@@ -859,6 +933,7 @@ const styles = StyleSheet.create({
   cancelButton: { backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#e2e8f0' }, 
   confirmButton: { backgroundColor: '#059669' },
   confirmPaymentButton: { backgroundColor: '#10b981' },
+  confirmReceiptButton: { backgroundColor: '#22c55e' },
   cancelButtonText: { color: '#64748b', fontWeight: '600' }, 
   confirmButtonText: { color: '#fff', fontWeight: '600' },
   // Payment Modal Styles

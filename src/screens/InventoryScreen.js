@@ -11,20 +11,24 @@ import {
   ScrollView,
   RefreshControl,
   Dimensions,
-  SafeAreaView,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import axios from 'axios';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../contexts/AuthContext';
 
 const API_URL = 'https://spinners-backend-1.onrender.com/api/inventory';
+const ORDERS_API_URL = 'https://spinners-backend-1.onrender.com/api/orders';
 const { width, height } = Dimensions.get('window');
 
 export default function InventoryScreen() {
   const navigation = useNavigation();
-  const { logout, user } = useContext(AuthContext);
+  const { logout, user, token } = useContext(AuthContext);
 
   const [products, setProducts] = useState([]);
+  const [inventoryOrders, setInventoryOrders] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -33,6 +37,7 @@ export default function InventoryScreen() {
   useFocusEffect(
     React.useCallback(() => {
       fetchProducts();
+      fetchInventoryOrders();
     }, [])
   );
 
@@ -49,9 +54,23 @@ export default function InventoryScreen() {
     }
   };
 
+  const fetchInventoryOrders = async () => {
+    try {
+      const response = await axios.get(`${ORDERS_API_URL}/artisan/inventory-orders`, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+      });
+      setInventoryOrders(response.data.orders || []);
+    } catch (err) {
+      console.log('Fetch inventory orders error:', err.message);
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchProducts();
+    await Promise.all([fetchProducts(), fetchInventoryOrders()]);
     setRefreshing(false);
   };
 
@@ -73,6 +92,72 @@ export default function InventoryScreen() {
         },
       },
     ]);
+  };
+
+  const handleMarkAsReceived = async (order) => {
+    Alert.alert(
+      'Confirm Receipt',
+      `Are you sure you want to mark order ${order._id.substring(0, 8)} as received? This will increase the product quantity.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Mark as Received',
+          style: 'default',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              
+              // Update order status to received
+              await axios.put(
+                `${ORDERS_API_URL}/mark-received/${order._id}`,
+                {},
+                { 
+                  headers: { 
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  } 
+                }
+              );
+
+              // Find the product to update
+              const productToUpdate = products.find(p => p._id === order.productId);
+              
+              if (productToUpdate) {
+                // Calculate new quantity
+                const newQuantity = productToUpdate.quantity + order.quantity;
+                
+                // Update product quantity
+                await axios.put(
+                  `${API_URL}/${order.productId}`,
+                  { quantity: newQuantity },
+                  {
+                    headers: { 
+                      Authorization: `Bearer ${token}`,
+                      'Content-Type': 'application/json'
+                    }
+                  }
+                );
+
+                Alert.alert(
+                  'Success', 
+                  `Order marked as received! ${order.quantity} units added to ${productToUpdate.name}. New quantity: ${newQuantity}`
+                );
+                
+                // Refresh data
+                await Promise.all([fetchProducts(), fetchInventoryOrders()]);
+              } else {
+                Alert.alert('Error', 'Product not found in inventory');
+              }
+            } catch (err) {
+              console.log('Mark as received error:', err.message);
+              Alert.alert('Error', 'Failed to mark order as received');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleLogout = () => {
@@ -100,14 +185,85 @@ export default function InventoryScreen() {
     return { status: 'In Stock', color: '#4caf50' };
   };
 
+  const getOrderStatusColor = (status) => {
+    const colors = {
+      'pending': '#f59e0b',
+      'approved': '#3b82f6',
+      'shipped': '#8b5cf6',
+      'delivered': '#10b981',
+      'received': '#059669',
+      'completed': '#059669',
+      'cancelled': '#ef4444',
+      'rejected': '#dc2626'
+    };
+    return colors[status?.toLowerCase()] || '#6b7280';
+  };
+
   // Filter products based on search query
   const filteredProducts = products.filter(product =>
     product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     product.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Get pending inventory orders that can be marked as received
+  const pendingReceiptOrders = inventoryOrders.filter(order => 
+    (order.orderStatus === 'delivered' || order.orderStatus === 'shipped') && 
+    order.orderType === 'inventory'
+  );
+
+  const renderInventoryOrder = ({ item }) => {
+    const product = products.find(p => p._id === item.productId);
+    return (
+      <View style={styles.orderCard}>
+        <View style={styles.orderHeader}>
+          <Text style={styles.orderId}>Order: {item._id?.substring(0, 8)}...</Text>
+          <View style={[styles.orderStatusBadge, { backgroundColor: getOrderStatusColor(item.orderStatus) }]}>
+            <Text style={styles.orderStatusText}>{item.orderStatus?.toUpperCase()}</Text>
+          </View>
+        </View>
+        
+        <View style={styles.orderDetails}>
+          <Text style={styles.orderProductName}>
+            📦 {product?.name || 'Product'} x {item.quantity}
+          </Text>
+          
+          <View style={styles.orderInfoRow}>
+            <Text style={styles.orderInfoLabel}>Supplier:</Text>
+            <Text style={styles.orderInfoValue}>
+              {item.supplierId?.fullName || item.supplierName || 'Supplier'}
+            </Text>
+          </View>
+          
+          <View style={styles.orderInfoRow}>
+            <Text style={styles.orderInfoLabel}>Order Date:</Text>
+            <Text style={styles.orderInfoValue}>
+              {new Date(item.createdAt).toLocaleDateString()}
+            </Text>
+          </View>
+
+          {(item.orderStatus === 'delivered' || item.orderStatus === 'shipped') && (
+            <TouchableOpacity
+              style={styles.receiveButton}
+              onPress={() => handleMarkAsReceived(item)}
+              disabled={loading}
+            >
+              <Text style={styles.receiveButtonText}>
+                {loading ? 'Processing...' : '✓ Mark as Received'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar 
+        backgroundColor="#1a3a8f" 
+        barStyle="light-content" 
+        translucent={false}
+      />
       <View style={styles.container}>
         {/* Sidebar Overlay */}
         {sidebarOpen && (
@@ -235,7 +391,7 @@ export default function InventoryScreen() {
 
         {/* Main Content */}
         <View style={styles.mainContent}>
-          {/* Header */}
+          {/* Header - Fixed with proper safe area spacing */}
           <View style={styles.header}>
             <TouchableOpacity
               style={styles.menuButton}
@@ -291,11 +447,29 @@ export default function InventoryScreen() {
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statNumber}>
-                {filteredProducts.filter((p) => p.quantity === 0).length}
+                {pendingReceiptOrders.length}
               </Text>
-              <Text style={styles.statLabel}>Out of Stock</Text>
+              <Text style={styles.statLabel}>Pending Receipt</Text>
             </View>
           </View>
+
+          {/* Pending Receipt Orders Section */}
+          {pendingReceiptOrders.length > 0 && (
+            <View style={styles.pendingReceiptSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Pending Receipt ({pendingReceiptOrders.length})</Text>
+                <Text style={styles.sectionSubtitle}>Mark orders as received to update inventory</Text>
+              </View>
+              <FlatList
+                data={pendingReceiptOrders}
+                keyExtractor={(item) => item._id}
+                renderItem={renderInventoryOrder}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.ordersListHorizontal}
+              />
+            </View>
+          )}
 
           {/* Product List */}
           <View style={styles.content}>
@@ -303,7 +477,7 @@ export default function InventoryScreen() {
               <Text style={styles.sectionTitle}>
                 {searchQuery ? `Search Results (${filteredProducts.length})` : 'All Products'}
               </Text>
-              <TouchableOpacity onPress={fetchProducts} style={styles.refreshButton}>
+              <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
                 <Text style={styles.refreshText}>🔄 Refresh</Text>
               </TouchableOpacity>
             </View>
@@ -396,7 +570,7 @@ export default function InventoryScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#1a3a8f',
   },
   container: {
     flex: 1,
@@ -432,7 +606,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     padding: 25,
-    paddingTop: 60,
+    paddingTop: 60, // Increased top padding for status bar
     backgroundColor: '#065f46',
     borderBottomWidth: 1,
     borderBottomColor: '#047857',
@@ -552,6 +726,7 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
+    backgroundColor: '#f8fafc',
   },
   header: {
     flexDirection: 'row',
@@ -571,7 +746,7 @@ const styles = StyleSheet.create({
   menuButton: {
     padding: 10,
     marginRight: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#f1f5f9',
     borderRadius: 8,
   },
   menuButtonText: {
@@ -665,6 +840,94 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
   },
+  // Pending Receipt Section Styles
+  pendingReceiptSection: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  ordersListHorizontal: {
+    paddingVertical: 8,
+  },
+  orderCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginRight: 12,
+    width: 280,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+    borderLeftWidth: 4,
+    borderLeftColor: '#f59e0b',
+  },
+  orderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  orderId: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  orderStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  orderStatusText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  orderDetails: {
+    flex: 1,
+  },
+  orderProductName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  orderInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  orderInfoLabel: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  orderInfoValue: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  receiveButton: {
+    backgroundColor: '#10b981',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  receiveButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 12,
+  },
   content: {
     flex: 1,
     padding: 16,
@@ -672,7 +935,7 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 16,
   },
   sectionTitle: {

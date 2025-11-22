@@ -12,6 +12,7 @@ import {
   Modal,
   ScrollView,
   RefreshControl,
+  Dimensions,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import axios from "axios";
@@ -22,6 +23,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 
 const API_BASE_URL = "https://spinners-backend-1.onrender.com/api";
+const { width, height } = Dimensions.get('window');
 
 export default function InventoryOrderScreen() {
   const { token, user } = useContext(AuthContext);
@@ -42,6 +44,10 @@ export default function InventoryOrderScreen() {
   const [selectedSupplier, setSelectedSupplier] = useState("");
   const [quantity, setQuantity] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
+
+  // Custom dropdown states
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
+  const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
 
   // Filter orders based on search query
   useEffect(() => {
@@ -183,6 +189,21 @@ export default function InventoryOrderScreen() {
     setRefreshing(true);
     setSearchQuery("");
     loadAllData();
+  };
+
+  // Get selected product and supplier details
+  const selectedProductDetails = products.find(p => p._id === selectedProduct);
+  const selectedSupplierDetails = suppliers.find(s => s._id === selectedSupplier);
+
+  // Custom dropdown handlers
+  const handleProductSelect = (productId) => {
+    setSelectedProduct(productId);
+    setShowProductDropdown(false);
+  };
+
+  const handleSupplierSelect = (supplierId) => {
+    setSelectedSupplier(supplierId);
+    setShowSupplierDropdown(false);
   };
 
   // Place inventory order - FIXED VERSION
@@ -600,9 +621,102 @@ export default function InventoryOrderScreen() {
     </View>
   );
 
-  // Get selected product details
-  const selectedProductDetails = products.find(p => p._id === selectedProduct);
-  const selectedSupplierDetails = suppliers.find(s => s._id === selectedSupplier);
+  // Custom Dropdown Components
+  const ProductDropdown = () => (
+    <Modal
+      visible={showProductDropdown}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setShowProductDropdown(false)}
+    >
+      <TouchableOpacity 
+        style={styles.dropdownOverlay}
+        activeOpacity={1}
+        onPress={() => setShowProductDropdown(false)}
+      >
+        <View style={styles.dropdownContainer}>
+          <View style={styles.dropdownHeader}>
+            <Text style={styles.dropdownTitle}>Select Product</Text>
+            <TouchableOpacity onPress={() => setShowProductDropdown(false)}>
+              <Text style={styles.dropdownClose}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={products}
+            keyExtractor={(item) => item._id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.dropdownItem,
+                  selectedProduct === item._id && styles.dropdownItemSelected
+                ]}
+                onPress={() => handleProductSelect(item._id)}
+              >
+                <Text style={[
+                  styles.dropdownItemText,
+                  selectedProduct === item._id && styles.dropdownItemTextSelected
+                ]}>
+                  {item.name} (Stock: {item.quantity})
+                </Text>
+                {selectedProduct === item._id && (
+                  <Text style={styles.dropdownCheckmark}>✓</Text>
+                )}
+              </TouchableOpacity>
+            )}
+            style={styles.dropdownList}
+          />
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  const SupplierDropdown = () => (
+    <Modal
+      visible={showSupplierDropdown}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setShowSupplierDropdown(false)}
+    >
+      <TouchableOpacity 
+        style={styles.dropdownOverlay}
+        activeOpacity={1}
+        onPress={() => setShowSupplierDropdown(false)}
+      >
+        <View style={styles.dropdownContainer}>
+          <View style={styles.dropdownHeader}>
+            <Text style={styles.dropdownTitle}>Select Supplier</Text>
+            <TouchableOpacity onPress={() => setShowSupplierDropdown(false)}>
+              <Text style={styles.dropdownClose}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={suppliers}
+            keyExtractor={(item) => item._id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.dropdownItem,
+                  selectedSupplier === item._id && styles.dropdownItemSelected
+                ]}
+                onPress={() => handleSupplierSelect(item._id)}
+              >
+                <Text style={[
+                  styles.dropdownItemText,
+                  selectedSupplier === item._id && styles.dropdownItemTextSelected
+                ]}>
+                  {item.fullName} ({item.businessName || item.email})
+                </Text>
+                {selectedSupplier === item._id && (
+                  <Text style={styles.dropdownCheckmark}>✓</Text>
+                )}
+              </TouchableOpacity>
+            )}
+            style={styles.dropdownList}
+          />
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
 
   return (
     <View style={styles.container}>
@@ -763,21 +877,18 @@ export default function InventoryOrderScreen() {
             {/* Product Selection */}
             <View style={styles.formSection}>
               <Text style={styles.label}>Select Product *</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={selectedProduct}
-                  onValueChange={(value) => setSelectedProduct(value)}
-                  style={styles.picker}
-                >
-                  {products.map((product) => (
-                    <Picker.Item
-                      key={product._id}
-                      label={`${product.name} (Stock: ${product.quantity})`}
-                      value={product._id}
-                    />
-                  ))}
-                </Picker>
-              </View>
+              <TouchableOpacity
+                style={styles.customPicker}
+                onPress={() => setShowProductDropdown(true)}
+              >
+                <Text style={styles.customPickerText}>
+                  {selectedProductDetails 
+                    ? `${selectedProductDetails.name} (Stock: ${selectedProductDetails.quantity})`
+                    : 'Select a product'
+                  }
+                </Text>
+                <Text style={styles.customPickerArrow}>▼</Text>
+              </TouchableOpacity>
               {selectedProductDetails && (
                 <View style={styles.productInfo}>
                   <Text style={styles.productInfoText}>
@@ -793,21 +904,18 @@ export default function InventoryOrderScreen() {
             {/* Supplier Selection */}
             <View style={styles.formSection}>
               <Text style={styles.label}>Select Supplier *</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={selectedSupplier}
-                  onValueChange={(value) => setSelectedSupplier(value)}
-                  style={styles.picker}
-                >
-                  {suppliers.map((supplier) => (
-                    <Picker.Item
-                      key={supplier._id}
-                      label={`${supplier.fullName} (${supplier.businessName || supplier.email})`}
-                      value={supplier._id}
-                    />
-                  ))}
-                </Picker>
-              </View>
+              <TouchableOpacity
+                style={styles.customPicker}
+                onPress={() => setShowSupplierDropdown(true)}
+              >
+                <Text style={styles.customPickerText}>
+                  {selectedSupplierDetails 
+                    ? `${selectedSupplierDetails.fullName} (${selectedSupplierDetails.businessName || selectedSupplierDetails.email})`
+                    : 'Select a supplier'
+                  }
+                </Text>
+                <Text style={styles.customPickerArrow}>▼</Text>
+              </TouchableOpacity>
               {selectedSupplierDetails && (
                 <View style={styles.supplierInfoCard}>
                   <Text style={styles.supplierInfoText}>
@@ -905,6 +1013,10 @@ export default function InventoryOrderScreen() {
           </ScrollView>
         </View>
       </Modal>
+
+      {/* Custom Dropdown Modals */}
+      <ProductDropdown />
+      <SupplierDropdown />
     </View>
   );
 }
@@ -1243,15 +1355,27 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginBottom: 8,
   },
-  pickerContainer: {
+  // Custom Picker Styles
+  customPicker: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#d1d5db',
     borderRadius: 8,
+    padding: 12,
     backgroundColor: '#fff',
-    overflow: 'hidden',
-  },
-  picker: {
     height: 50,
+  },
+  customPickerText: {
+    fontSize: 16,
+    color: '#1e293b',
+    flex: 1,
+  },
+  customPickerArrow: {
+    fontSize: 16,
+    color: '#64748b',
+    marginLeft: 8,
   },
   productInfo: {
     marginTop: 8,
@@ -1353,5 +1477,65 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Custom Dropdown Styles
+  dropdownOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  dropdownContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: height * 0.7,
+    paddingBottom: 20,
+  },
+  dropdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  dropdownTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  dropdownClose: {
+    fontSize: 20,
+    color: '#64748b',
+    fontWeight: 'bold',
+  },
+  dropdownList: {
+    maxHeight: height * 0.6,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  dropdownItemSelected: {
+    backgroundColor: '#f0f9ff',
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: '#1e293b',
+    flex: 1,
+  },
+  dropdownItemTextSelected: {
+    color: '#1a3a8f',
+    fontWeight: '600',
+  },
+  dropdownCheckmark: {
+    fontSize: 16,
+    color: '#1a3a8f',
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
 });

@@ -13,7 +13,10 @@ import {
   Dimensions,
   Animated,
   Modal,
+  StatusBar,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import axios from "axios";
 import { AuthContext } from "../contexts/AuthContext";
 import { useNavigation } from "@react-navigation/native";
@@ -781,177 +784,188 @@ export default function FinanceHomeScreen() {
   );
 
   return (
-    <View style={styles.mainContainer}>
-      {/* Sidebar */}
-      <Animated.View style={[styles.sidebar, { transform: [{ translateX: sidebarTranslateX }] }]}>
-        <View style={styles.sidebarHeader}>
-          <View style={styles.avatar}><Ionicons name="business" size={32} color="#fff" /></View>
-          <Text style={styles.sidebarTitle}>Finance Dashboard</Text>
-          <Text style={styles.sidebarSubtitle}>Payment Management</Text>
-        </View>
-        <View style={styles.sidebarMenu}>
-          <SidebarItem title="Dashboard" onPress={() => handleTabChange("Dashboard")} icon="speedometer-outline" />
-          <SidebarItem title="Orders" onPress={() => handleTabChange("Orders")} icon="list-outline" />
-          <SidebarItem title="Inventory Orders" onPress={navigateToInventoryOrders} icon="cube-outline" />
-          <SidebarItem title="Help" onPress={() => navigation.navigate("Help")} icon="help-circle-outline" />
-          <SidebarItem title="About Us" onPress={() => navigation.navigate("About")} icon="information-circle-outline" />
-          <SidebarItem title="Contact Us" onPress={() => navigation.navigate("Contact")} icon="chatbubble-ellipses-outline" />
-        </View>
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color="#fff" />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </Animated.View>
-
-      {/* Main Content */}
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.menuButton} onPress={toggleSidebar}>
-            <Ionicons name={sidebarVisible ? "close" : "menu"} size={28} color="#1a3a8f" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{activeTab === "Dashboard" ? "Finance Overview" : "Order Management"}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-
-        {/* Dashboard Content */}
-        {activeTab === "Dashboard" && <DashboardContent />}
-
-        {/* Orders Tab */}
-        {activeTab === "Orders" && (
-          <View style={styles.ordersContainer}>
-            <View style={styles.filterContainer}>
-              {["all", "approved", "pending", "rejected"].map((status) => (
-                <TouchableOpacity
-                  key={status}
-                  style={[styles.filterTab, orderFilter === status && styles.activeFilterTab]}
-                  onPress={() => { setOrderFilter(status); fetchOrders(status); }}
-                >
-                  <Text style={[styles.filterTabText, orderFilter === status && styles.activeFilterTabText]}>
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                  </Text>
-                  <View style={[styles.filterIndicator, orderFilter === status && styles.activeFilterIndicator]} />
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#1a3a8f" />
-                <Text style={styles.loadingText}>Loading orders...</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={orders}
-                keyExtractor={(item) => item._id}
-                renderItem={renderOrder}
-                contentContainerStyle={styles.ordersList}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-                showsVerticalScrollIndicator={false}
-                ListEmptyComponent={
-                  <View style={styles.emptyState}>
-                    <Ionicons name="document-text-outline" size={64} color="#ccc" />
-                    <Text style={styles.emptyStateText}>No {orderFilter} orders found</Text>
-                  </View>
-                }
-              />
-            )}
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar 
+        backgroundColor="#1a3a8f" 
+        barStyle="light-content" 
+        translucent={false}
+      />
+      <View style={styles.mainContainer}>
+        {/* Sidebar */}
+        <Animated.View style={[styles.sidebar, { transform: [{ translateX: sidebarTranslateX }] }]}>
+          <View style={styles.sidebarHeader}>
+            <View style={styles.avatar}><Ionicons name="business" size={32} color="#fff" /></View>
+            <Text style={styles.sidebarTitle}>Finance Dashboard</Text>
+            <Text style={styles.sidebarSubtitle}>Payment Management</Text>
           </View>
-        )}
-      </View>
+          <View style={styles.sidebarMenu}>
+            <SidebarItem title="Dashboard" onPress={() => handleTabChange("Dashboard")} icon="speedometer-outline" />
+            <SidebarItem title="Orders" onPress={() => handleTabChange("Orders")} icon="list-outline" />
+            <SidebarItem title="Inventory Orders" onPress={navigateToInventoryOrders} icon="cube-outline" />
+            <SidebarItem title="Help" onPress={() => navigation.navigate("Help")} icon="help-circle-outline" />
+            <SidebarItem title="About Us" onPress={() => navigation.navigate("About")} icon="information-circle-outline" />
+            <SidebarItem title="Contact Us" onPress={() => navigation.navigate("Contact")} icon="chatbubble-ellipses-outline" />
+          </View>
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={20} color="#fff" />
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </Animated.View>
 
-      {/* Order Details Modal */}
-      <Modal visible={modalVisible} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Order Details</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color="#1a3a8f" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView contentContainerStyle={styles.detailsSection}>
-              {selectedOrder && (
-                <>
-                  <View style={styles.detailRow}>
-                    <View style={styles.detailText}>
-                      <Text style={styles.detailLabel}>Product</Text>
-                      <Text style={styles.detailValue}>{selectedOrder.productId?.name || "N/A"}</Text>
+        {/* Main Content */}
+        <View style={styles.container}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.menuButton} onPress={toggleSidebar}>
+              <Ionicons name={sidebarVisible ? "close" : "menu"} size={28} color="#1a3a8f" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>{activeTab === "Dashboard" ? "Finance Overview" : "Order Management"}</Text>
+            <View style={styles.headerSpacer} />
+          </View>
+
+          {/* Dashboard Content */}
+          {activeTab === "Dashboard" && <DashboardContent />}
+
+          {/* Orders Tab */}
+          {activeTab === "Orders" && (
+            <View style={styles.ordersContainer}>
+              <View style={styles.filterContainer}>
+                {["all", "approved", "pending", "rejected"].map((status) => (
+                  <TouchableOpacity
+                    key={status}
+                    style={[styles.filterTab, orderFilter === status && styles.activeFilterTab]}
+                    onPress={() => { setOrderFilter(status); fetchOrders(status); }}
+                  >
+                    <Text style={[styles.filterTabText, orderFilter === status && styles.activeFilterTabText]}>
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </Text>
+                    <View style={[styles.filterIndicator, orderFilter === status && styles.activeFilterIndicator]} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {loading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#1a3a8f" />
+                  <Text style={styles.loadingText}>Loading orders...</Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={orders}
+                  keyExtractor={(item) => item._id}
+                  renderItem={renderOrder}
+                  contentContainerStyle={styles.ordersList}
+                  refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                  showsVerticalScrollIndicator={false}
+                  ListEmptyComponent={
+                    <View style={styles.emptyState}>
+                      <Ionicons name="document-text-outline" size={64} color="#ccc" />
+                      <Text style={styles.emptyStateText}>No {orderFilter} orders found</Text>
                     </View>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <View style={styles.detailText}>
-                      <Text style={styles.detailLabel}>User</Text>
-                      <Text style={styles.detailValue}>{selectedOrder.userId?.fullName || "N/A"}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <View style={styles.detailText}>
-                      <Text style={styles.detailLabel}>Amount</Text>
-                      <Text style={styles.detailValue}>{selectedOrder.totalPrice} KES</Text>
-                    </View>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <View style={styles.detailText}>
-                      <Text style={styles.detailLabel}>Order Status</Text>
-                      <Text style={styles.detailValue}>{selectedOrder.orderStatus}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <View style={styles.detailText}>
-                      <Text style={styles.detailLabel}>Payment Status</Text>
-                      <Text style={styles.detailValue}>{selectedOrder.paymentStatus}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <View style={styles.detailText}>
-                      <Text style={styles.detailLabel}>Order Type</Text>
-                      <Text style={styles.detailValue}>{selectedOrder.orderType === 'inventory' ? 'Inventory' : 'Goods Purchase'}</Text>
-                    </View>
-                  </View>
-                </>
+                  }
+                />
               )}
-            </ScrollView>
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.actionButtonModal, styles.approveButton]}
-                onPress={() => updatePaymentStatus("approved")}
-                disabled={updating}
-              >
-                <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
-                <Text style={styles.actionButtonText}>Approve</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButtonModal, styles.rejectButton]}
-                onPress={() => updatePaymentStatus("rejected")}
-                disabled={updating}
-              >
-                <Ionicons name="close-circle-outline" size={20} color="#fff" />
-                <Text style={styles.actionButtonText}>Reject</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButtonModal, styles.receiptButton]}
-                onPress={() => generateReceiptPdf(selectedOrder)}
-                disabled={generatingReceipt}
-              >
-                {generatingReceipt ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
+            </View>
+          )}
+        </View>
+
+        {/* Order Details Modal */}
+        <Modal visible={modalVisible} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Order Details</Text>
+                <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+                  <Ionicons name="close" size={24} color="#1a3a8f" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView contentContainerStyle={styles.detailsSection}>
+                {selectedOrder && (
                   <>
-                    <Ionicons name="document-text-outline" size={20} color="#fff" />
-                    <Text style={styles.actionButtonText}>Receipt</Text>
+                    <View style={styles.detailRow}>
+                      <View style={styles.detailText}>
+                        <Text style={styles.detailLabel}>Product</Text>
+                        <Text style={styles.detailValue}>{selectedOrder.productId?.name || "N/A"}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <View style={styles.detailText}>
+                        <Text style={styles.detailLabel}>User</Text>
+                        <Text style={styles.detailValue}>{selectedOrder.userId?.fullName || "N/A"}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <View style={styles.detailText}>
+                        <Text style={styles.detailLabel}>Amount</Text>
+                        <Text style={styles.detailValue}>{selectedOrder.totalPrice} KES</Text>
+                      </View>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <View style={styles.detailText}>
+                        <Text style={styles.detailLabel}>Order Status</Text>
+                        <Text style={styles.detailValue}>{selectedOrder.orderStatus}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <View style={styles.detailText}>
+                        <Text style={styles.detailLabel}>Payment Status</Text>
+                        <Text style={styles.detailValue}>{selectedOrder.paymentStatus}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <View style={styles.detailText}>
+                        <Text style={styles.detailLabel}>Order Type</Text>
+                        <Text style={styles.detailValue}>{selectedOrder.orderType === 'inventory' ? 'Inventory' : 'Goods Purchase'}</Text>
+                      </View>
+                    </View>
                   </>
                 )}
-              </TouchableOpacity>
+              </ScrollView>
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.actionButtonModal, styles.approveButton]}
+                  onPress={() => updatePaymentStatus("approved")}
+                  disabled={updating}
+                >
+                  <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+                  <Text style={styles.actionButtonText}>Approve</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButtonModal, styles.rejectButton]}
+                  onPress={() => updatePaymentStatus("rejected")}
+                  disabled={updating}
+                >
+                  <Ionicons name="close-circle-outline" size={20} color="#fff" />
+                  <Text style={styles.actionButtonText}>Reject</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButtonModal, styles.receiptButton]}
+                  onPress={() => generateReceiptPdf(selectedOrder)}
+                  disabled={generatingReceipt}
+                >
+                  {generatingReceipt ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="document-text-outline" size={20} color="#fff" />
+                      <Text style={styles.actionButtonText}>Receipt</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#1a3a8f',
+  },
   mainContainer: {
     flex: 1,
     flexDirection: 'row',
@@ -1059,6 +1073,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
+    // Removed fixed height to let it adjust naturally
   },
   menuButton: {
     padding: 5,

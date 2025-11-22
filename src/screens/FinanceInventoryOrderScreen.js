@@ -3,8 +3,8 @@ import React, { useState, useEffect, useContext } from "react";
 import {
   View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator,
   Alert, StyleSheet, Modal, ScrollView, RefreshControl, Platform,
+  Dimensions,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
 import axios from "axios";
 import { AuthContext } from "../contexts/AuthContext";
 import * as Print from 'expo-print';
@@ -12,6 +12,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 
 const API_BASE_URL = "https://spinners-backend-1.onrender.com/api";
+const { width, height } = Dimensions.get('window');
 
 export default function FinanceInventoryOrderScreen({ navigation }) {
   const { token, user } = useContext(AuthContext);
@@ -29,6 +30,10 @@ export default function FinanceInventoryOrderScreen({ navigation }) {
   const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
   const [paymentNotes, setPaymentNotes] = useState("");
   const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  // Custom dropdown states
+  const [showStatusFilterDropdown, setShowStatusFilterDropdown] = useState(false);
+  const [showPaymentMethodDropdown, setShowPaymentMethodDropdown] = useState(false);
 
   const fetchOrders = async () => {
     try {
@@ -299,7 +304,7 @@ export default function FinanceInventoryOrderScreen({ navigation }) {
             .status-badge { 
               display: inline-block; 
               padding: 6px 12px; 
-              border-radius: 4px; 
+              borderRadius: 4px; 
               color: white; 
               font-size: 12px;
               font-weight: bold;
@@ -600,6 +605,127 @@ export default function FinanceInventoryOrderScreen({ navigation }) {
     setShowPaymentModal(true);
   };
 
+  // Custom dropdown handlers
+  const handleStatusFilterSelect = (value) => {
+    setStatusFilter(value);
+    setShowStatusFilterDropdown(false);
+  };
+
+  const handlePaymentMethodSelect = (value) => {
+    setPaymentMethod(value);
+    setShowPaymentMethodDropdown(false);
+  };
+
+  // Custom Dropdown Components
+  const StatusFilterDropdown = () => (
+    <Modal
+      visible={showStatusFilterDropdown}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setShowStatusFilterDropdown(false)}
+    >
+      <TouchableOpacity 
+        style={styles.dropdownOverlay}
+        activeOpacity={1}
+        onPress={() => setShowStatusFilterDropdown(false)}
+      >
+        <View style={styles.dropdownContainer}>
+          <View style={styles.dropdownHeader}>
+            <Text style={styles.dropdownTitle}>Filter by Payment Status</Text>
+            <TouchableOpacity onPress={() => setShowStatusFilterDropdown(false)}>
+              <Text style={styles.dropdownClose}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={[
+              { label: "All", value: "all" },
+              { label: "Payment Pending", value: "payment_pending" },
+              { label: "Payment Approved", value: "payment_approved" },
+              { label: "Payment Rejected", value: "payment_rejected" },
+              { label: "Paid", value: "payment_paid" },
+            ]}
+            keyExtractor={(item) => item.value}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.dropdownItem,
+                  statusFilter === item.value && styles.dropdownItemSelected
+                ]}
+                onPress={() => handleStatusFilterSelect(item.value)}
+              >
+                <Text style={[
+                  styles.dropdownItemText,
+                  statusFilter === item.value && styles.dropdownItemTextSelected
+                ]}>
+                  {item.label}
+                </Text>
+                {statusFilter === item.value && (
+                  <Text style={styles.dropdownCheckmark}>✓</Text>
+                )}
+              </TouchableOpacity>
+            )}
+            style={styles.dropdownList}
+          />
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  const PaymentMethodDropdown = () => (
+    <Modal
+      visible={showPaymentMethodDropdown}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setShowPaymentMethodDropdown(false)}
+    >
+      <TouchableOpacity 
+        style={styles.dropdownOverlay}
+        activeOpacity={1}
+        onPress={() => setShowPaymentMethodDropdown(false)}
+      >
+        <View style={styles.dropdownContainer}>
+          <View style={styles.dropdownHeader}>
+            <Text style={styles.dropdownTitle}>Select Payment Method</Text>
+            <TouchableOpacity onPress={() => setShowPaymentMethodDropdown(false)}>
+              <Text style={styles.dropdownClose}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={[
+              { label: "Bank Transfer", value: "bank_transfer" },
+              { label: "Cash", value: "cash" },
+              { label: "Check", value: "check" },
+              { label: "Digital Payment", value: "digital" },
+              { label: "Mobile Money", value: "mobile_money" },
+              { label: "Other", value: "other" },
+            ]}
+            keyExtractor={(item) => item.value}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.dropdownItem,
+                  paymentMethod === item.value && styles.dropdownItemSelected
+                ]}
+                onPress={() => handlePaymentMethodSelect(item.value)}
+              >
+                <Text style={[
+                  styles.dropdownItemText,
+                  paymentMethod === item.value && styles.dropdownItemTextSelected
+                ]}>
+                  {item.label}
+                </Text>
+                {paymentMethod === item.value && (
+                  <Text style={styles.dropdownCheckmark}>✓</Text>
+                )}
+              </TouchableOpacity>
+            )}
+            style={styles.dropdownList}
+          />
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
   const renderOrder = ({ item }) => (
     <TouchableOpacity style={styles.orderCard} onPress={() => openOrderDetails(item)}>
       <View style={styles.orderHeader}>
@@ -700,7 +826,13 @@ export default function FinanceInventoryOrderScreen({ navigation }) {
 
       <View style={styles.filterContainer}>
         <View style={styles.searchSection}>
-          <TextInput style={styles.searchInput} placeholder="Search orders..." value={searchQuery} onChangeText={setSearchQuery} />
+          <TextInput 
+            style={styles.searchInput} 
+            placeholder="Search orders..." 
+            placeholderTextColor="#94a3b8"
+            value={searchQuery} 
+            onChangeText={setSearchQuery} 
+          />
           {searchQuery.length > 0 && (
             <TouchableOpacity style={styles.clearSearchButton} onPress={() => setSearchQuery("")}>
               <Text style={styles.clearSearchText}>✕</Text>
@@ -710,15 +842,19 @@ export default function FinanceInventoryOrderScreen({ navigation }) {
         
         <View style={styles.filterSection}>
           <Text style={styles.filterLabel}>Payment Status:</Text>
-          <View style={styles.pickerContainer}>
-            <Picker selectedValue={statusFilter} onValueChange={setStatusFilter} style={styles.picker}>
-              <Picker.Item label="All" value="all" />
-              <Picker.Item label="Payment Pending" value="payment_pending" />
-              <Picker.Item label="Payment Approved" value="payment_approved" />
-              <Picker.Item label="Payment Rejected" value="payment_rejected" />
-              <Picker.Item label="Paid" value="payment_paid" />
-            </Picker>
-          </View>
+          <TouchableOpacity
+            style={styles.customPicker}
+            onPress={() => setShowStatusFilterDropdown(true)}
+          >
+            <Text style={styles.customPickerText}>
+              {statusFilter === "all" ? "All" : 
+               statusFilter === "payment_pending" ? "Payment Pending" :
+               statusFilter === "payment_approved" ? "Payment Approved" :
+               statusFilter === "payment_rejected" ? "Payment Rejected" :
+               statusFilter === "payment_paid" ? "Paid" : "All"}
+            </Text>
+            <Text style={styles.customPickerArrow}>▼</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -871,28 +1007,49 @@ export default function FinanceInventoryOrderScreen({ navigation }) {
 
                 <View style={styles.formSection}>
                   <Text style={styles.label}>Payment Method *</Text>
-                  <View style={[styles.pickerContainer, styles.largePicker]}>
-                    <Picker selectedValue={paymentMethod} onValueChange={setPaymentMethod} style={styles.picker}>
-                      <Picker.Item label="Bank Transfer" value="bank_transfer" />
-                      <Picker.Item label="Cash" value="cash" />
-                      <Picker.Item label="Check" value="check" />
-                      <Picker.Item label="Digital Payment" value="digital" />
-                      <Picker.Item label="Mobile Money" value="mobile_money" />
-                      <Picker.Item label="Other" value="other" />
-                    </Picker>
-                  </View>
+                  <TouchableOpacity
+                    style={styles.customPicker}
+                    onPress={() => setShowPaymentMethodDropdown(true)}
+                  >
+                    <Text style={styles.customPickerText}>
+                      {paymentMethod === "bank_transfer" ? "Bank Transfer" :
+                       paymentMethod === "cash" ? "Cash" :
+                       paymentMethod === "check" ? "Check" :
+                       paymentMethod === "digital" ? "Digital Payment" :
+                       paymentMethod === "mobile_money" ? "Mobile Money" :
+                       paymentMethod === "other" ? "Other" : "Select Payment Method"}
+                    </Text>
+                    <Text style={styles.customPickerArrow}>▼</Text>
+                  </TouchableOpacity>
                 </View>
 
                 {selectedOrder.paymentStatus !== 'approved' && (
                   <View style={styles.formSection}>
                     <Text style={styles.label}>Amount *</Text>
-                    <TextInput style={styles.input} placeholder="Enter amount in KSh" value={paymentAmount} onChangeText={setPaymentAmount} keyboardType="numeric" editable={!loading} />
+                    <TextInput 
+                      style={styles.input} 
+                      placeholder="Enter amount in KSh" 
+                      placeholderTextColor="#94a3b8"
+                      value={paymentAmount} 
+                      onChangeText={setPaymentAmount} 
+                      keyboardType="numeric" 
+                      editable={!loading} 
+                    />
                   </View>
                 )}
 
                 <View style={styles.formSection}>
                   <Text style={styles.label}>Payment Notes (Optional)</Text>
-                  <TextInput style={[styles.input, styles.textArea]} placeholder="Payment reference or notes..." value={paymentNotes} onChangeText={setPaymentNotes} multiline numberOfLines={3} editable={!loading} />
+                  <TextInput 
+                    style={[styles.input, styles.textArea]} 
+                    placeholder="Payment reference or notes..." 
+                    placeholderTextColor="#94a3b8"
+                    value={paymentNotes} 
+                    onChangeText={setPaymentNotes} 
+                    multiline 
+                    numberOfLines={3} 
+                    editable={!loading} 
+                  />
                 </View>
 
                 <View style={styles.actionButtons}>
@@ -960,6 +1117,10 @@ export default function FinanceInventoryOrderScreen({ navigation }) {
           </ScrollView>
         </View>
       </Modal>
+
+      {/* Custom Dropdown Modals */}
+      <StatusFilterDropdown />
+      <PaymentMethodDropdown />
     </View>
   );
 }
@@ -980,15 +1141,95 @@ const styles = StyleSheet.create({
   pending: { color: '#f59e0b' }, approved: { color: '#22c55e' }, paid: { color: '#10b981' }, revenue: { color: '#8b5cf6' },
   statLabel: { fontSize: 10, color: '#64748b', marginTop: 4, textAlign: 'center' },
   filterContainer: { padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
-  searchSection: { marginBottom: 12 },
-  searchInput: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#fff' },
+  searchSection: { marginBottom: 12, position: 'relative' },
+  searchInput: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#fff', color: '#1e293b' },
   clearSearchButton: { position: 'absolute', right: 12, top: 12, padding: 4 },
   clearSearchText: { fontSize: 16, color: '#64748b' },
-  filterSection: { flexDirection: 'row', alignItems: 'center' },
+  filterSection: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   filterLabel: { fontSize: 14, fontWeight: '600', color: '#374151', marginRight: 8 },
-  pickerContainer: { flex: 1, borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, backgroundColor: '#fff', overflow: 'hidden' },
-  largePicker: { height: 50 },
-  picker: { height: 50, fontSize: 16 },
+  // Custom Picker Styles
+  customPicker: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#fff',
+    height: 50,
+    flex: 1,
+  },
+  customPickerText: {
+    fontSize: 16,
+    color: '#1e293b',
+    flex: 1,
+  },
+  customPickerArrow: {
+    fontSize: 16,
+    color: '#64748b',
+    marginLeft: 8,
+  },
+  // Custom Dropdown Styles
+  dropdownOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  dropdownContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: height * 0.7,
+    paddingBottom: 20,
+  },
+  dropdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  dropdownTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  dropdownClose: {
+    fontSize: 20,
+    color: '#64748b',
+    fontWeight: 'bold',
+  },
+  dropdownList: {
+    maxHeight: height * 0.6,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  dropdownItemSelected: {
+    backgroundColor: '#f0f9ff',
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: '#1e293b',
+    flex: 1,
+  },
+  dropdownItemTextSelected: {
+    color: '#1a3a8f',
+    fontWeight: '600',
+  },
+  dropdownCheckmark: {
+    fontSize: 16,
+    color: '#1a3a8f',
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
   section: { flex: 1, padding: 16 },
   sectionHeader: { marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1e293b' },
@@ -1035,7 +1276,7 @@ const styles = StyleSheet.create({
   paymentDetailRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   paymentDetailLabel: { fontSize: 14, color: '#64748b' }, paymentDetailValue: { fontSize: 14, fontWeight: '600', color: '#374151' },
   formSection: { marginBottom: 20 }, label: { fontSize: 16, fontWeight: '600', color: '#374151', marginBottom: 8 },
-  input: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#fff' },
+  input: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#fff', color: '#1e293b' },
   textArea: { height: 80, textAlignVertical: 'top' }, actionButtons: { gap: 12, marginBottom: 30 },
   button: { height: 50, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
   primaryButton: { backgroundColor: '#1a3a8f' }, approveButton: { backgroundColor: '#22c55e' }, rejectButton: { backgroundColor: '#ef4444' }, paymentButton: { backgroundColor: '#8b5cf6' }, paymentReviewButton: { backgroundColor: '#f59e0b' }, markPaidButton: { backgroundColor: '#10b981' }, receiptButton: { backgroundColor: '#7c3aed' },
