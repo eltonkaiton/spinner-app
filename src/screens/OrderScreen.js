@@ -252,6 +252,7 @@ export default function OrderScreen({ route, navigation }) {
     }
   };
 
+  // ✅ UPDATED: Customer-specific mark as received function
   const handleMarkAsReceived = async (orderId) => {
     Alert.alert(
       "Confirm Receipt",
@@ -262,17 +263,35 @@ export default function OrderScreen({ route, navigation }) {
           text: "Yes, Received",
           onPress: async () => {
             try {
+              // ✅ Use the new customer-specific endpoint
               const response = await axios.put(
-                `${API_URL}/${orderId}/mark-received`,
+                `${API_URL}/customer/mark-received/${orderId}`,
                 {},
                 { headers: { Authorization: `Bearer ${token}` } }
               );
 
               if (response.data.success) {
-                Alert.alert("✅ Success", "Order marked as received!");
+                Alert.alert("✅ Success", "Order marked as received! Thank you for confirming.");
+                
+                // Update the local state to reflect the change
                 setOrders((prev) =>
                   prev.map((o) =>
-                    o._id === orderId ? { ...o, orderStatus: "Received" } : o
+                    o._id === orderId ? { 
+                      ...o, 
+                      orderStatus: "received",
+                      ...response.data.order // Include any other updated fields
+                    } : o
+                  )
+                );
+                
+                // Also update filteredOrders
+                setFilteredOrders((prev) =>
+                  prev.map((o) =>
+                    o._id === orderId ? { 
+                      ...o, 
+                      orderStatus: "received",
+                      ...response.data.order
+                    } : o
                   )
                 );
               } else {
@@ -280,7 +299,17 @@ export default function OrderScreen({ route, navigation }) {
               }
             } catch (err) {
               console.error("❌ Mark as received error:", err.response?.data || err.message);
-              Alert.alert("Error", "Failed to mark as received.");
+              
+              // Provide more specific error messages
+              if (err.response?.status === 400) {
+                Alert.alert("Cannot Mark as Received", err.response.data.message || "Order must be delivered first.");
+              } else if (err.response?.status === 403) {
+                Alert.alert("Access Denied", "You can only mark your own orders as received.");
+              } else if (err.response?.status === 404) {
+                Alert.alert("Order Not Found", "The order could not be found.");
+              } else {
+                Alert.alert("Error", "Failed to mark as received. Please try again.");
+              }
             }
           },
         },
@@ -457,8 +486,8 @@ export default function OrderScreen({ route, navigation }) {
                 <td><strong>Order Status</strong></td>
                 <td>
                   <span class="status-badge ${
-                    order.orderStatus === 'Received' ? 'status-received' : 
-                    order.orderStatus === 'delivered' ? 'status-delivered' : 'status-pending'
+                    order.orderStatus?.toLowerCase() === 'received' ? 'status-received' : 
+                    order.orderStatus?.toLowerCase() === 'delivered' ? 'status-delivered' : 'status-pending'
                   }">
                     ${order.orderStatus}
                   </span>
@@ -490,22 +519,30 @@ export default function OrderScreen({ route, navigation }) {
     }
   };
 
+  // ✅ UPDATED: Enhanced status color helper
   const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'received': return '#28a745';
-      case 'delivered': return '#17a2b8';
-      case 'paid': return '#28a745';
-      case 'pending': return '#ffc107';
-      default: return '#6c757d';
+    const statusLower = status?.toLowerCase();
+    switch (statusLower) {
+      case 'received': return '#28a745'; // Green
+      case 'delivered': return '#17a2b8'; // Blue
+      case 'paid': return '#28a745'; // Green
+      case 'pending': return '#ffc107'; // Yellow
+      case 'processing': return '#fd7e14'; // Orange
+      case 'shipped': return '#20c997'; // Teal
+      case 'completed': return '#6f42c1'; // Purple
+      default: return '#6c757d'; // Gray
     }
   };
 
+  // ✅ UPDATED: Render order item with proper status handling
   const renderOrderItem = ({ item }) => (
     <View style={styles.orderCard}>
       <View style={styles.orderHeader}>
         <Text style={styles.cardTitle}>{item.productId?.name || "Unnamed Product"}</Text>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.orderStatus) }]}>
-          <Text style={styles.statusText}>{item.orderStatus}</Text>
+          <Text style={styles.statusText}>
+            {item.orderStatus?.charAt(0).toUpperCase() + item.orderStatus?.slice(1) || "Pending"}
+          </Text>
         </View>
       </View>
       
@@ -553,21 +590,22 @@ export default function OrderScreen({ route, navigation }) {
           <Text style={styles.receiptBtnText}>Generate Receipt</Text>
         </TouchableOpacity>
 
-        {/* ✅ Mark as Received Button */}
-        {item.orderStatus === "delivered" && (
+        {/* ✅ Mark as Received Button - Only show for delivered orders */}
+        {item.orderStatus?.toLowerCase() === "delivered" && (
           <TouchableOpacity
             style={styles.receivedBtn}
             onPress={() => handleMarkAsReceived(item._id)}
           >
             <MaterialIcons name="check-circle" size={18} color="#fff" />
-            <Text style={styles.receivedBtnText}>Mark as Received</Text>
+            <Text style={styles.receivedBtnText}>Confirm Receipt</Text>
           </TouchableOpacity>
         )}
 
-        {item.orderStatus === "Received" && (
+        {/* ✅ Show received confirmation */}
+        {item.orderStatus?.toLowerCase() === "received" && (
           <View style={styles.receivedLabel}>
             <MaterialIcons name="verified" size={18} color="#28a745" />
-            <Text style={styles.receivedLabelText}>Order Received</Text>
+            <Text style={styles.receivedLabelText}>Order Received ✓</Text>
           </View>
         )}
       </View>

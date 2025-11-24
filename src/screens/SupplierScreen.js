@@ -1,6 +1,19 @@
 // ./src/screens/SupplierScreen.js
 import React, { useState, useEffect, useContext } from "react";
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, Modal, ScrollView, RefreshControl, Dimensions, TextInput } from "react-native";
+import { 
+  View, 
+  Text, 
+  FlatList, 
+  TouchableOpacity, 
+  ActivityIndicator, 
+  Alert, 
+  StyleSheet, 
+  Modal, 
+  ScrollView, 
+  RefreshControl, 
+  Dimensions, 
+  TextInput 
+} from "react-native";
 import axios from "axios";
 import { AuthContext } from "../contexts/AuthContext";
 import { useNavigation } from "@react-navigation/native";
@@ -30,6 +43,7 @@ export default function SupplierScreen() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentNotes, setPaymentNotes] = useState("");
 
+  // Filter orders based on search query
   useEffect(() => {
     if (searchQuery.trim() === "") {
       setFilteredOrders(orders);
@@ -46,35 +60,33 @@ export default function SupplierScreen() {
     }
   }, [searchQuery, orders]);
 
-  const openSidebar = () => {
-    setSidebarVisible(true);
-  };
-
-  const closeSidebar = () => {
-    setSidebarVisible(false);
-  };
-
-  const toggleSidebar = () => {
-    if (sidebarVisible) {
-      closeSidebar();
-    } else {
-      openSidebar();
-    }
-  };
-
+  // Sidebar functions
+  const openSidebar = () => setSidebarVisible(true);
+  const closeSidebar = () => setSidebarVisible(false);
+  const toggleSidebar = () => sidebarVisible ? closeSidebar() : openSidebar();
   const handleBackdropPress = () => closeSidebar();
   const handleLogout = async () => { closeSidebar(); await logout(); };
 
   const navigateToScreen = (screenName) => {
     closeSidebar();
-    const screenMap = { 'Dashboard': 'SupplierDashboard', 'Orders': 'Orders', 'About': 'About', 'Help': 'Help', 'Contact': 'Contact' };
+    const screenMap = { 
+      'Dashboard': 'SupplierDashboard', 
+      'Orders': 'Orders', 
+      'About': 'About', 
+      'Help': 'Help', 
+      'Contact': 'Contact' 
+    };
     navigation.navigate(screenMap[screenName] || screenName);
   };
 
+  // Fetch supplier orders
   const fetchSupplierOrders = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/orders/supplier/my-orders`, {
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { 
+          Authorization: `Bearer ${token}`, 
+          'Content-Type': 'application/json' 
+        },
       });
       const fetchedOrders = res.data.orders || [];
       setOrders(fetchedOrders);
@@ -88,10 +100,14 @@ export default function SupplierScreen() {
     }
   };
 
+  // Fallback function to fetch all orders
   const fetchAllOrdersAsSupplier = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/orders`, {
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { 
+          Authorization: `Bearer ${token}`, 
+          'Content-Type': 'application/json' 
+        },
       });
       const supplierOrders = res.data.orders?.filter(order => 
         order.supplierId?._id === user._id || order.supplierId === user._id
@@ -103,6 +119,7 @@ export default function SupplierScreen() {
     }
   };
 
+  // Load data
   const loadData = async () => {
     try {
       setLoading(true);
@@ -115,15 +132,29 @@ export default function SupplierScreen() {
     }
   };
 
-  useEffect(() => { loadData(); }, []);
-  const onRefresh = () => { setRefreshing(true); setSearchQuery(""); loadData(); };
+  useEffect(() => { 
+    loadData(); 
+  }, []);
 
+  const onRefresh = () => { 
+    setRefreshing(true); 
+    setSearchQuery(""); 
+    loadData(); 
+  };
+
+  // Update order status
   const updateOrderStatus = async (orderId, newStatus, notes = "") => {
     try {
       setLoading(true);
-      const response = await axios.put(`${API_BASE_URL}/orders/update-status/${orderId}`,
+      const response = await axios.put(
+        `${API_BASE_URL}/orders/update-status/${orderId}`,
         { status: newStatus, notes: notes || undefined },
-        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`, 
+            'Content-Type': 'application/json' 
+          } 
+        }
       );
       Alert.alert("Success", `Order marked as ${newStatus}`);
       loadData();
@@ -136,11 +167,19 @@ export default function SupplierScreen() {
     }
   };
 
+  // Mark as delivered
   const markAsDelivered = async (orderId) => {
     try {
       setLoading(true);
-      await axios.put(`${API_BASE_URL}/orders/mark-complete/${orderId}`, {},
-        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+      await axios.put(
+        `${API_BASE_URL}/orders/mark-complete/${orderId}`, 
+        {},
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`, 
+            'Content-Type': 'application/json' 
+          } 
+        }
       );
       Alert.alert("Success", "Order marked as delivered!");
       loadData();
@@ -156,13 +195,19 @@ export default function SupplierScreen() {
     }
   };
 
-  // NEW: Supervisor confirm payment received
+  // Supervisor confirm payment received
   const confirmPaymentReceived = async (orderId) => {
     try {
       setLoading(true);
-      const response = await axios.put(`${API_BASE_URL}/orders/update-payment-status/${orderId}`,
+      const response = await axios.put(
+        `${API_BASE_URL}/orders/update-payment-status/${orderId}`,
         { paymentStatus: "paid" },
-        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`, 
+            'Content-Type': 'application/json' 
+          } 
+        }
       );
       
       Alert.alert("Success", "Payment confirmed as received!");
@@ -177,7 +222,7 @@ export default function SupplierScreen() {
     }
   };
 
-  // UPDATED: Submit payment amount for received orders with KSH validation and duplicate prevention
+  // Submit payment amount - UPDATED to allow for received orders
   const submitPaymentAmount = async () => {
     if (!paymentAmount || isNaN(parseFloat(paymentAmount)) || parseFloat(paymentAmount) <= 0) {
       Alert.alert("Error", "Please enter a valid payment amount in KSH");
@@ -195,13 +240,27 @@ export default function SupplierScreen() {
       return;
     }
 
-    // Check if payment is already submitted
+    // Allow payment submission even if there's a pending payment for received orders
     if (selectedOrder?.paymentStatus === 'pending' && selectedOrder?.totalPrice > 0) {
-      Alert.alert("Payment Already Submitted", "Payment amount has already been submitted and is pending finance approval.");
-      setShowPaymentModal(false);
+      Alert.alert(
+        "Update Payment Amount", 
+        "A payment amount has already been submitted. Do you want to update it?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { 
+            text: "Update", 
+            onPress: () => proceedWithPaymentSubmission(amount) 
+          }
+        ]
+      );
       return;
     }
 
+    proceedWithPaymentSubmission(amount);
+  };
+
+  // Helper function for payment submission
+  const proceedWithPaymentSubmission = async (amount) => {
     try {
       setLoading(true);
       const paymentData = {
@@ -211,13 +270,24 @@ export default function SupplierScreen() {
         currency: "KSH"
       };
 
-      const response = await axios.put(`${API_BASE_URL}/orders/${selectedOrder._id}/payment`,
+      const response = await axios.put(
+        `${API_BASE_URL}/orders/${selectedOrder._id}/payment`,
         paymentData,
-        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`, 
+            'Content-Type': 'application/json' 
+          } 
+        }
       );
 
       console.log("✅ Payment amount submitted:", response.data);
-      Alert.alert("Success", "Payment amount submitted for finance approval!");
+      
+      const statusMessage = selectedOrder.orderStatus?.toLowerCase() === 'received' 
+        ? "Payment amount submitted for received order! Waiting for finance approval."
+        : "Payment amount submitted for finance approval!";
+      
+      Alert.alert("Success", statusMessage);
       
       // Reset and refresh
       setPaymentAmount("");
@@ -228,21 +298,27 @@ export default function SupplierScreen() {
       
     } catch (err) {
       console.error("❌ Submit payment error:", err);
-      Alert.alert("Error", "Failed to submit payment amount. Please try again.");
+      const errorMessage = err.response?.data?.message || "Failed to submit payment amount. Please try again.";
+      Alert.alert("Error", errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  // FIXED: Supplier confirm payment receipt after finance approval
+  // Supplier confirm payment receipt after finance approval
   const confirmPaymentReceipt = async (orderId) => {
     try {
       setLoading(true);
       
-      // Use the existing update-payment-status endpoint with "received" status
-      const response = await axios.put(`${API_BASE_URL}/orders/update-payment-status/${orderId}`,
+      const response = await axios.put(
+        `${API_BASE_URL}/orders/update-payment-status/${orderId}`,
         { paymentStatus: "received" },
-        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`, 
+            'Content-Type': 'application/json' 
+          } 
+        }
       );
       
       Alert.alert("Success", "Payment receipt confirmed!");
@@ -257,6 +333,7 @@ export default function SupplierScreen() {
     }
   };
 
+  // Generate receipt
   const generateReceipt = async (order) => {
     try {
       setGeneratingReceipt(true);
@@ -295,7 +372,10 @@ export default function SupplierScreen() {
 
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `Receipt - Order ${order._id}` });
+        await Sharing.shareAsync(uri, { 
+          mimeType: 'application/pdf', 
+          dialogTitle: `Receipt - Order ${order._id}` 
+        });
       } else {
         Alert.alert("Success", "Receipt generated successfully!");
       }
@@ -306,6 +386,7 @@ export default function SupplierScreen() {
     }
   };
 
+  // Status color helpers
   const getStatusColor = (status) => {
     const colors = { 
       'completed': '#10b981', 'delivered': '#10b981', 'received': '#10b981', 
@@ -328,19 +409,24 @@ export default function SupplierScreen() {
 
   const getStatusText = (status) => !status ? 'Pending' : status.charAt(0).toUpperCase() + status.slice(1);
 
-  // UPDATED: Check if payment can be submitted (not already submitted)
+  // UPDATED: Check if payment can be submitted (allow for received orders)
   const canSubmitPayment = (order) => {
     const status = order.orderStatus?.toLowerCase();
     const paymentStatus = order.paymentStatus?.toLowerCase();
     
-    // Only allow payment submission for delivered/received orders that don't have pending payment
+    // Allow payment submission for delivered/received/completed orders
     const validStatus = ['delivered', 'received', 'completed'].includes(status);
-    const noPendingPayment = paymentStatus !== 'pending' && paymentStatus !== 'paid' && paymentStatus !== 'received';
     
-    return validStatus && noPendingPayment && order.totalPrice > 0;
+    // Only allow if payment hasn't been submitted yet (not pending, paid, or received)
+    const noExistingPayment = !['pending', 'paid', 'received', 'approved'].includes(paymentStatus);
+    
+    // Also allow if totalPrice is 0 or not set (new payment submission)
+    const needsPayment = !order.totalPrice || order.totalPrice === 0;
+    
+    return validStatus && (noExistingPayment || needsPayment);
   };
 
-  // NEW: Check if supplier can confirm payment receipt (after finance approves payment)
+  // Check if supplier can confirm payment receipt (after finance approves payment)
   const canConfirmPaymentReceipt = (order) => {
     const paymentStatus = order.paymentStatus?.toLowerCase();
     const userRole = user?.role;
@@ -349,7 +435,7 @@ export default function SupplierScreen() {
     return userRole === 'supplier' && paymentStatus === 'paid' && order.totalPrice > 0;
   };
 
-  // NEW: Check if supervisor can confirm payment
+  // Check if supervisor can confirm payment
   const canConfirmPayment = (order) => {
     const paymentStatus = order.paymentStatus?.toLowerCase();
     const userRole = user?.role;
@@ -358,6 +444,7 @@ export default function SupplierScreen() {
     return userRole === 'supervisor' && paymentStatus === 'pending' && order.totalPrice > 0;
   };
 
+  // UPDATED: Action buttons with payment submission for received orders
   const getActionButtons = (order) => {
     const status = order.orderStatus?.toLowerCase();
     const paymentStatus = order.paymentStatus?.toLowerCase();
@@ -378,20 +465,33 @@ export default function SupplierScreen() {
       ],
       'delivered': [
         { text: '📄 Receipt', style: styles.receiptButton, action: () => generateReceipt(order) },
-        ...(canSubmitPayment(order) ? [{ text: 'Submit Payment', style: styles.paymentButton, action: () => { setSelectedOrder(order); setShowPaymentModal(true); } }] : [])
+        ...(canSubmitPayment(order) ? [{ 
+          text: 'Submit Payment', 
+          style: styles.paymentButton, 
+          action: () => { setSelectedOrder(order); setShowPaymentModal(true); } 
+        }] : [])
       ],
       'received': [
         { text: '📄 Receipt', style: styles.receiptButton, action: () => generateReceipt(order) },
-        ...(canSubmitPayment(order) ? [{ text: 'Submit Payment', style: styles.paymentButton, action: () => { setSelectedOrder(order); setShowPaymentModal(true); } }] : [])
+        ...(canSubmitPayment(order) ? [{ 
+          text: order.paymentStatus === 'pending' ? 'Update Payment' : 'Submit Payment',
+          style: styles.paymentButton, 
+          action: () => { setSelectedOrder(order); setShowPaymentModal(true); } 
+        }] : [])
       ],
       'completed': [
-        { text: '📄 Receipt', style: styles.receiptButton, action: () => generateReceipt(order) }
+        { text: '📄 Receipt', style: styles.receiptButton, action: () => generateReceipt(order) },
+        ...(canSubmitPayment(order) ? [{ 
+          text: 'Submit Payment', 
+          style: styles.paymentButton, 
+          action: () => { setSelectedOrder(order); setShowPaymentModal(true); } 
+        }] : [])
       ]
     };
 
     const statusButtons = buttons[status] || [];
     
-    // NEW: Add supervisor payment confirmation button
+    // Add supervisor payment confirmation button
     if (canConfirmPayment(order)) {
       statusButtons.push({
         text: '✅ Confirm Payment',
@@ -400,7 +500,7 @@ export default function SupplierScreen() {
       });
     }
 
-    // NEW: Add supplier payment receipt confirmation button
+    // Add supplier payment receipt confirmation button
     if (canConfirmPaymentReceipt(order)) {
       statusButtons.push({
         text: '💰 Confirm Receipt',
@@ -414,8 +514,15 @@ export default function SupplierScreen() {
     return (
       <View style={styles.actionButtons}>
         {statusButtons.map((btn, index) => (
-          <TouchableOpacity key={index} style={[styles.actionButton, btn.style]} onPress={btn.action} disabled={loading}>
-            <Text style={styles.actionButtonText}>{loading && !btn.text.includes('📄') && !btn.text.includes('✅') && !btn.text.includes('💰') ? '...' : btn.text}</Text>
+          <TouchableOpacity 
+            key={index} 
+            style={[styles.actionButton, btn.style]} 
+            onPress={btn.action} 
+            disabled={loading}
+          >
+            <Text style={styles.actionButtonText}>
+              {loading && !btn.text.includes('📄') && !btn.text.includes('✅') && !btn.text.includes('💰') ? '...' : btn.text}
+            </Text>
           </TouchableOpacity>
         ))}
         
@@ -436,8 +543,15 @@ export default function SupplierScreen() {
     );
   };
 
+  // Render order item
   const renderOrderItem = ({ item }) => (
-    <TouchableOpacity style={styles.orderCard} onPress={() => { setSelectedOrder(item); setShowOrderDetails(true); }}>
+    <TouchableOpacity 
+      style={styles.orderCard} 
+      onPress={() => { 
+        setSelectedOrder(item); 
+        setShowOrderDetails(true); 
+      }}
+    >
       <View style={styles.orderHeader}>
         <View>
           <Text style={styles.orderId}>Order: {item._id?.substring(0, 8)}...</Text>
@@ -451,7 +565,9 @@ export default function SupplierScreen() {
         <Text style={styles.quantity}>Quantity: <Text style={styles.bold}>{item.quantity}</Text></Text>
         <View style={styles.customerInfo}>
           <Text style={styles.customerLabel}>Artisan:</Text>
-          <Text style={styles.customerName}>{item.artisanId?.fullName || item.artisanId?.email || item.userId?.fullName || "Artisan"}</Text>
+          <Text style={styles.customerName}>
+            {item.artisanId?.fullName || item.artisanId?.email || item.userId?.fullName || "Artisan"}
+          </Text>
         </View>
         {item.totalPrice > 0 && <Text style={styles.price}>💰 Total: KSH {item.totalPrice}</Text>}
         {item.paymentStatus && item.paymentStatus !== 'pending' && (
@@ -465,6 +581,7 @@ export default function SupplierScreen() {
     </TouchableOpacity>
   );
 
+  // Statistics
   const pendingOrders = filteredOrders.filter(order => order.orderStatus === 'pending').length;
   const processingOrders = filteredOrders.filter(order => ['approved', 'processing', 'shipped'].includes(order.orderStatus)).length;
   const completedOrders = filteredOrders.filter(order => ['completed', 'delivered', 'received'].includes(order.orderStatus)).length;
@@ -474,7 +591,9 @@ export default function SupplierScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={toggleSidebar} style={styles.menuButton}><Text style={styles.menuIcon}>☰</Text></TouchableOpacity>
+        <TouchableOpacity onPress={toggleSidebar} style={styles.menuButton}>
+          <Text style={styles.menuIcon}>☰</Text>
+        </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.title}>Supplier Dashboard</Text>
           <Text style={styles.subtitle}>Manage your supply requests and deliveries</Text>
@@ -487,31 +606,53 @@ export default function SupplierScreen() {
       {/* Sidebar */}
       {sidebarVisible && (
         <View style={styles.overlay}>
-          <TouchableOpacity style={styles.overlayTouchable} onPress={handleBackdropPress} activeOpacity={1}/>
+          <TouchableOpacity 
+            style={styles.overlayTouchable} 
+            onPress={handleBackdropPress} 
+            activeOpacity={1}
+          />
         </View>
       )}
       {sidebarVisible && (
         <View style={styles.sidebar}>
           <View style={styles.sidebarHeader}>
             <View style={styles.sidebarUserInfo}>
-              <View style={styles.userAvatar}><Text style={styles.userAvatarText}>{user?.fullName?.charAt(0) || user?.email?.charAt(0) || 'S'}</Text></View>
+              <View style={styles.userAvatar}>
+                <Text style={styles.userAvatarText}>
+                  {user?.fullName?.charAt(0) || user?.email?.charAt(0) || 'S'}
+                </Text>
+              </View>
               <View style={styles.userDetails}>
                 <Text style={styles.userName}>{user?.fullName || 'Supplier'}</Text>
                 <Text style={styles.userEmail}>{user?.email}</Text>
                 <Text style={styles.userRole}>{user?.role}</Text>
               </View>
             </View>
-            <TouchableOpacity onPress={closeSidebar} style={styles.closeSidebarButton}><Text style={styles.closeSidebarText}>×</Text></TouchableOpacity>
+            <TouchableOpacity onPress={closeSidebar} style={styles.closeSidebarButton}>
+              <Text style={styles.closeSidebarText}>×</Text>
+            </TouchableOpacity>
           </View>
-          <ScrollView style={styles.sidebarContent} showsVerticalScrollIndicator={false} contentContainerStyle={styles.sidebarContentContainer}>
+          <ScrollView 
+            style={styles.sidebarContent} 
+            showsVerticalScrollIndicator={false} 
+            contentContainerStyle={styles.sidebarContentContainer}
+          >
             {[['MAIN MENU', [['📊','Dashboard'],['📦','Orders']]], ['SUPPORT', [['ℹ️','About'],['❓','Help'],['📞','Contact']]]].map(([title, items], idx) => (
               <View key={idx} style={styles.sidebarSection}>
                 <Text style={styles.sidebarSectionTitle}>{title}</Text>
                 {items.map(([icon, text], i) => (
-                  <TouchableOpacity key={i} style={styles.sidebarItem} onPress={() => navigateToScreen(text)}>
+                  <TouchableOpacity 
+                    key={i} 
+                    style={styles.sidebarItem} 
+                    onPress={() => navigateToScreen(text)}
+                  >
                     <Text style={styles.sidebarIcon}>{icon}</Text>
                     <Text style={styles.sidebarText}>{text}</Text>
-                    {text === 'Orders' && <View style={styles.orderBadge}><Text style={styles.orderBadgeText}>{orders.length}</Text></View>}
+                    {text === 'Orders' && (
+                      <View style={styles.orderBadge}>
+                        <Text style={styles.orderBadgeText}>{orders.length}</Text>
+                      </View>
+                    )}
                   </TouchableOpacity>
                 ))}
               </View>
@@ -530,8 +671,22 @@ export default function SupplierScreen() {
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
           <Text style={styles.searchIcon}>🔍</Text>
-          <TextInput style={styles.searchInput} placeholder="Search orders..." value={searchQuery} onChangeText={setSearchQuery} clearButtonMode="while-editing" placeholderTextColor="#94a3b8" />
-          {searchQuery.length > 0 && <TouchableOpacity style={styles.clearSearchButton} onPress={() => setSearchQuery("")}><Text style={styles.clearSearchText}>✕</Text></TouchableOpacity>}
+          <TextInput 
+            style={styles.searchInput} 
+            placeholder="Search orders..." 
+            value={searchQuery} 
+            onChangeText={setSearchQuery} 
+            clearButtonMode="while-editing" 
+            placeholderTextColor="#94a3b8" 
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity 
+              style={styles.clearSearchButton} 
+              onPress={() => setSearchQuery("")}
+            >
+              <Text style={styles.clearSearchText}>✕</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -556,7 +711,11 @@ export default function SupplierScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Supply Requests</Text>
           <View style={styles.sectionHeaderRight}>
-            {searchQuery.length > 0 && <Text style={styles.searchResultsText}>{filteredOrders.length} of {orders.length} orders</Text>}
+            {searchQuery.length > 0 && (
+              <Text style={styles.searchResultsText}>
+                {filteredOrders.length} of {orders.length} orders
+              </Text>
+            )}
             <Text style={styles.ordersCount}>{filteredOrders.length} orders</Text>
           </View>
         </View>
@@ -568,10 +727,22 @@ export default function SupplierScreen() {
           </View>
         ) : filteredOrders.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyStateTitle}>{searchQuery.length > 0 ? 'No matching orders found' : 'No supply requests yet'}</Text>
-            <Text style={styles.emptyStateText}>{searchQuery.length > 0 ? 'Try adjusting your search terms' : 'You will see orders here when artisans request supplies from you.'}</Text>
-            <TouchableOpacity style={styles.emptyStateButton} onPress={searchQuery.length > 0 ? () => setSearchQuery("") : onRefresh}>
-              <Text style={styles.emptyStateButtonText}>{searchQuery.length > 0 ? 'Clear Search' : 'Refresh'}</Text>
+            <Text style={styles.emptyStateTitle}>
+              {searchQuery.length > 0 ? 'No matching orders found' : 'No supply requests yet'}
+            </Text>
+            <Text style={styles.emptyStateText}>
+              {searchQuery.length > 0 
+                ? 'Try adjusting your search terms' 
+                : 'You will see orders here when artisans request supplies from you.'
+              }
+            </Text>
+            <TouchableOpacity 
+              style={styles.emptyStateButton} 
+              onPress={searchQuery.length > 0 ? () => setSearchQuery("") : onRefresh}
+            >
+              <Text style={styles.emptyStateButtonText}>
+                {searchQuery.length > 0 ? 'Clear Search' : 'Refresh'}
+              </Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -579,7 +750,13 @@ export default function SupplierScreen() {
             data={filteredOrders} 
             renderItem={renderOrderItem} 
             keyExtractor={(item) => item._id} 
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#1a3a8f"]} />}
+            refreshControl={
+              <RefreshControl 
+                refreshing={refreshing} 
+                onRefresh={onRefresh} 
+                colors={["#1a3a8f"]} 
+              />
+            }
             showsVerticalScrollIndicator={false} 
             contentContainerStyle={styles.ordersList} 
           />
@@ -615,9 +792,15 @@ export default function SupplierScreen() {
                     </>
                   ) : label === 'Artisan' ? (
                     <>
-                      <Text style={styles.detailValue}>{selectedOrder.artisanId?.fullName || selectedOrder.artisanId?.email || selectedOrder.userId?.fullName || "Artisan"}</Text>
-                      <Text style={styles.detailSubtext}>📧 {selectedOrder.artisanId?.email || selectedOrder.userId?.email || "No email"}</Text>
-                      {selectedOrder.artisanId?.phone && <Text style={styles.detailSubtext}>📞 {selectedOrder.artisanId?.phone}</Text>}
+                      <Text style={styles.detailValue}>
+                        {selectedOrder.artisanId?.fullName || selectedOrder.artisanId?.email || selectedOrder.userId?.fullName || "Artisan"}
+                      </Text>
+                      <Text style={styles.detailSubtext}>
+                        📧 {selectedOrder.artisanId?.email || selectedOrder.userId?.email || "No email"}
+                      </Text>
+                      {selectedOrder.artisanId?.phone && (
+                        <Text style={styles.detailSubtext}>📞 {selectedOrder.artisanId?.phone}</Text>
+                      )}
                     </>
                   ) : label === 'Quantity' ? (
                     <Text style={styles.detailValue}>{selectedOrder.quantity} units</Text>
@@ -640,7 +823,9 @@ export default function SupplierScreen() {
                   <Text style={styles.notesText}>{selectedOrder.notes}</Text>
                 </View>
               )}
-              <View style={styles.detailActions}>{getActionButtons(selectedOrder)}</View>
+              <View style={styles.detailActions}>
+                {getActionButtons(selectedOrder)}
+              </View>
             </ScrollView>
           )}
         </View>
@@ -651,20 +836,36 @@ export default function SupplierScreen() {
         <View style={styles.confirmationModal}>
           <View style={styles.confirmationContent}>
             <Text style={styles.confirmationTitle}>Confirm Delivery</Text>
-            <Text style={styles.confirmationText}>Are you sure you want to mark this order as delivered?</Text>
+            <Text style={styles.confirmationText}>
+              Are you sure you want to mark this order as delivered?
+            </Text>
             {selectedOrder && (
               <View style={styles.deliverySummary}>
                 <Text style={styles.deliveryItem}>Product: {selectedOrder.productId?.name}</Text>
                 <Text style={styles.deliveryItem}>Quantity: {selectedOrder.quantity}</Text>
-                <Text style={styles.deliveryItem}>Artisan: {selectedOrder.artisanId?.fullName || selectedOrder.artisanId?.email}</Text>
+                <Text style={styles.deliveryItem}>
+                  Artisan: {selectedOrder.artisanId?.fullName || selectedOrder.artisanId?.email}
+                </Text>
               </View>
             )}
             <View style={styles.confirmationButtons}>
-              <TouchableOpacity style={[styles.confirmationButton, styles.cancelButton]} onPress={() => setShowDeliveryModal(false)} disabled={loading}>
+              <TouchableOpacity 
+                style={[styles.confirmationButton, styles.cancelButton]} 
+                onPress={() => setShowDeliveryModal(false)} 
+                disabled={loading}
+              >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.confirmationButton, styles.confirmButton]} onPress={() => markAsDelivered(selectedOrder?._id)} disabled={loading}>
-                {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.confirmButtonText}>Confirm Delivery</Text>}
+              <TouchableOpacity 
+                style={[styles.confirmationButton, styles.confirmButton]} 
+                onPress={() => markAsDelivered(selectedOrder?._id)} 
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>Confirm Delivery</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -675,7 +876,9 @@ export default function SupplierScreen() {
       <Modal visible={showPaymentModal} animationType="slide" presentationStyle="formSheet">
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Submit Payment Amount</Text>
+            <Text style={styles.modalTitle}>
+              {selectedOrder?.orderStatus?.toLowerCase() === 'received' ? 'Submit Final Payment' : 'Submit Payment Amount'}
+            </Text>
             <TouchableOpacity onPress={() => setShowPaymentModal(false)} style={styles.closeButton}>
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
@@ -694,11 +897,29 @@ export default function SupplierScreen() {
                 </View>
                 <View style={styles.paymentDetailRow}>
                   <Text style={styles.paymentDetailLabel}>Artisan:</Text>
-                  <Text style={styles.paymentDetailValue}>{selectedOrder.artisanId?.fullName || selectedOrder.artisanId?.email}</Text>
+                  <Text style={styles.paymentDetailValue}>
+                    {selectedOrder.artisanId?.fullName || selectedOrder.artisanId?.email}
+                  </Text>
                 </View>
+                <View style={styles.paymentDetailRow}>
+                  <Text style={styles.paymentDetailLabel}>Order Status:</Text>
+                  <Text style={styles.paymentDetailValue}>{getStatusText(selectedOrder.orderStatus)}</Text>
+                </View>
+                
+                {/* Show different messages based on order status */}
+                {selectedOrder.orderStatus?.toLowerCase() === 'received' && (
+                  <View style={[styles.paymentWarning, { backgroundColor: '#f0f9ff', borderColor: '#0ea5e9' }]}>
+                    <Text style={[styles.paymentWarningText, { color: '#0369a1' }]}>
+                      ℹ️ Order has been received by artisan. You can now submit the payment amount.
+                    </Text>
+                  </View>
+                )}
+                
                 {selectedOrder.paymentStatus === 'pending' && selectedOrder.totalPrice > 0 && (
                   <View style={styles.paymentWarning}>
-                    <Text style={styles.paymentWarningText}>⚠️ Payment already submitted and pending approval</Text>
+                    <Text style={styles.paymentWarningText}>
+                      ⚠️ Payment already submitted and pending approval
+                    </Text>
                   </View>
                 )}
               </View>
@@ -717,7 +938,7 @@ export default function SupplierScreen() {
                   setPaymentAmount(filteredText);
                 }} 
                 keyboardType="decimal-pad" 
-                editable={!loading && !(selectedOrder?.paymentStatus === 'pending' && selectedOrder?.totalPrice > 0)}
+                editable={!loading}
               />
               <Text style={styles.amountHint}>Amount must be between KSH 0 and KSH 50,000</Text>
             </View>
@@ -731,7 +952,7 @@ export default function SupplierScreen() {
                 onChangeText={setPaymentNotes} 
                 multiline 
                 numberOfLines={3} 
-                editable={!loading && !(selectedOrder?.paymentStatus === 'pending' && selectedOrder?.totalPrice > 0)}
+                editable={!loading}
               />
             </View>
             
@@ -740,20 +961,24 @@ export default function SupplierScreen() {
                 style={[
                   styles.button, 
                   styles.primaryButton, 
-                  (loading || !paymentAmount || parseFloat(paymentAmount) <= 0 || parseFloat(paymentAmount) > 50000 || (selectedOrder?.paymentStatus === 'pending' && selectedOrder?.totalPrice > 0)) && styles.disabledButton
+                  (loading || !paymentAmount || parseFloat(paymentAmount) <= 0 || parseFloat(paymentAmount) > 50000) && styles.disabledButton
                 ]} 
                 onPress={submitPaymentAmount} 
-                disabled={loading || !paymentAmount || parseFloat(paymentAmount) <= 0 || parseFloat(paymentAmount) > 50000 || (selectedOrder?.paymentStatus === 'pending' && selectedOrder?.totalPrice > 0)}
+                disabled={loading || !paymentAmount || parseFloat(paymentAmount) <= 0 || parseFloat(paymentAmount) > 50000}
               >
                 {loading ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : selectedOrder?.paymentStatus === 'pending' && selectedOrder?.totalPrice > 0 ? (
-                  <Text style={styles.buttonText}>Payment Already Submitted</Text>
+                  <Text style={styles.buttonText}>Update Payment</Text>
                 ) : (
                   <Text style={styles.buttonText}>Submit for Approval</Text>
                 )}
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.secondaryButton]} onPress={() => setShowPaymentModal(false)} disabled={loading}>
+              <TouchableOpacity 
+                style={[styles.button, styles.secondaryButton]} 
+                onPress={() => setShowPaymentModal(false)} 
+                disabled={loading}
+              >
                 <Text style={styles.secondaryButtonText}>Cancel</Text>
               </TouchableOpacity>
             </View>
@@ -766,7 +991,9 @@ export default function SupplierScreen() {
         <View style={styles.confirmationModal}>
           <View style={styles.confirmationContent}>
             <Text style={styles.confirmationTitle}>Confirm Payment Received</Text>
-            <Text style={styles.confirmationText}>Are you sure you want to confirm that payment has been received for this order?</Text>
+            <Text style={styles.confirmationText}>
+              Are you sure you want to confirm that payment has been received for this order?
+            </Text>
             {selectedOrder && (
               <View style={styles.paymentConfirmationSummary}>
                 <Text style={styles.paymentConfirmationItem}>Order: {selectedOrder._id}</Text>
@@ -776,23 +1003,37 @@ export default function SupplierScreen() {
               </View>
             )}
             <View style={styles.confirmationButtons}>
-              <TouchableOpacity style={[styles.confirmationButton, styles.cancelButton]} onPress={() => setShowPaymentConfirmationModal(false)} disabled={loading}>
+              <TouchableOpacity 
+                style={[styles.confirmationButton, styles.cancelButton]} 
+                onPress={() => setShowPaymentConfirmationModal(false)} 
+                disabled={loading}
+              >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.confirmationButton, styles.confirmPaymentButton]} onPress={() => confirmPaymentReceived(selectedOrder?._id)} disabled={loading}>
-                {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.confirmButtonText}>Confirm Payment</Text>}
+              <TouchableOpacity 
+                style={[styles.confirmationButton, styles.confirmPaymentButton]} 
+                onPress={() => confirmPaymentReceived(selectedOrder?._id)} 
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>Confirm Payment</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* NEW: Payment Receipt Confirmation Modal for Supplier */}
+      {/* Payment Receipt Confirmation Modal for Supplier */}
       <Modal visible={showPaymentReceiptModal} animationType="fade" transparent={true}>
         <View style={styles.confirmationModal}>
           <View style={styles.confirmationContent}>
             <Text style={styles.confirmationTitle}>Confirm Payment Receipt</Text>
-            <Text style={styles.confirmationText}>Are you sure you want to confirm that you have received the payment for this order?</Text>
+            <Text style={styles.confirmationText}>
+              Are you sure you want to confirm that you have received the payment for this order?
+            </Text>
             {selectedOrder && (
               <View style={styles.paymentConfirmationSummary}>
                 <Text style={styles.paymentConfirmationItem}>Order: {selectedOrder._id}</Text>
@@ -802,11 +1043,23 @@ export default function SupplierScreen() {
               </View>
             )}
             <View style={styles.confirmationButtons}>
-              <TouchableOpacity style={[styles.confirmationButton, styles.cancelButton]} onPress={() => setShowPaymentReceiptModal(false)} disabled={loading}>
+              <TouchableOpacity 
+                style={[styles.confirmationButton, styles.cancelButton]} 
+                onPress={() => setShowPaymentReceiptModal(false)} 
+                disabled={loading}
+              >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.confirmationButton, styles.confirmReceiptButton]} onPress={() => confirmPaymentReceipt(selectedOrder?._id)} disabled={loading}>
-                {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.confirmButtonText}>Confirm Receipt</Text>}
+              <TouchableOpacity 
+                style={[styles.confirmationButton, styles.confirmReceiptButton]} 
+                onPress={() => confirmPaymentReceipt(selectedOrder?._id)} 
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>Confirm Receipt</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -818,20 +1071,81 @@ export default function SupplierScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 20, paddingTop: 60, backgroundColor: "#059669", shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4, zIndex: 10 },
-  menuButton: { padding: 10, marginRight: 12, backgroundColor: 'rgba(255, 255, 255, 0.2)', borderRadius: 8 }, 
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 20, 
+    paddingTop: 60, 
+    backgroundColor: "#059669", 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.1, 
+    shadowRadius: 8, 
+    elevation: 4, 
+    zIndex: 10 
+  },
+  menuButton: { 
+    padding: 10, 
+    marginRight: 12, 
+    backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+    borderRadius: 8 
+  }, 
   menuIcon: { fontSize: 18, color: '#fff', fontWeight: 'bold' },
   headerContent: { flex: 1 }, 
   title: { fontSize: 20, fontWeight: 'bold', color: '#fff' }, 
   subtitle: { fontSize: 12, color: '#d1fae5', marginTop: 2 },
-  refreshButton: { padding: 10, backgroundColor: 'rgba(255, 255, 255, 0.2)', borderRadius: 8 }, 
+  refreshButton: { 
+    padding: 10, 
+    backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+    borderRadius: 8 
+  }, 
   refreshText: { fontSize: 18, color: '#fff' },
-  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 998 }, 
+  overlay: { 
+    position: 'absolute', 
+    top: 0, 
+    left: 0, 
+    right: 0, 
+    bottom: 0, 
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', 
+    zIndex: 998 
+  }, 
   overlayTouchable: { flex: 1 },
-  sidebar: { position: 'absolute', top: 0, left: 0, bottom: 0, width: width * 0.82, backgroundColor: '#fff', zIndex: 999, shadowColor: '#000', shadowOffset: { width: 2, height: 0 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 20, borderRightWidth: 1, borderRightColor: '#e2e8f0' },
-  sidebarHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: 25, paddingTop: 65, backgroundColor: '#065f46', borderBottomWidth: 1, borderBottomColor: '#047857' },
+  sidebar: { 
+    position: 'absolute', 
+    top: 0, 
+    left: 0, 
+    bottom: 0, 
+    width: width * 0.82, 
+    backgroundColor: '#fff', 
+    zIndex: 999, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 2, height: 0 }, 
+    shadowOpacity: 0.3, 
+    shadowRadius: 20, 
+    elevation: 20, 
+    borderRightWidth: 1, 
+    borderRightColor: '#e2e8f0' 
+  },
+  sidebarHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'flex-start', 
+    padding: 25, 
+    paddingTop: 65, 
+    backgroundColor: '#065f46', 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#047857' 
+  },
   sidebarUserInfo: { flex: 1, flexDirection: 'row', alignItems: 'center' }, 
-  userAvatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#059669', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  userAvatar: { 
+    width: 50, 
+    height: 50, 
+    borderRadius: 25, 
+    backgroundColor: '#059669', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginRight: 12 
+  },
   userAvatarText: { fontSize: 18, fontWeight: 'bold', color: '#fff' }, 
   userDetails: { flex: 1 }, 
   userName: { fontSize: 16, fontWeight: 'bold', color: '#fff', marginBottom: 2 },
@@ -842,57 +1156,195 @@ const styles = StyleSheet.create({
   sidebarContent: { flex: 1 }, 
   sidebarContentContainer: { paddingBottom: 20 }, 
   sidebarSection: { marginTop: 20 }, 
-  sidebarSectionTitle: { fontSize: 12, fontWeight: '700', color: '#64748b', marginBottom: 8, marginHorizontal: 25, letterSpacing: 1 },
-  sidebarItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 25, marginHorizontal: 10, marginVertical: 2, borderRadius: 10, backgroundColor: 'transparent' },
+  sidebarSectionTitle: { 
+    fontSize: 12, 
+    fontWeight: '700', 
+    color: '#64748b', 
+    marginBottom: 8, 
+    marginHorizontal: 25, 
+    letterSpacing: 1 
+  },
+  sidebarItem: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingVertical: 14, 
+    paddingHorizontal: 25, 
+    marginHorizontal: 10, 
+    marginVertical: 2, 
+    borderRadius: 10, 
+    backgroundColor: 'transparent' 
+  },
   sidebarIcon: { fontSize: 18, marginRight: 15, width: 24, textAlign: 'center' }, 
   sidebarText: { fontSize: 15, color: '#374151', fontWeight: '500', flex: 1 },
-  orderBadge: { backgroundColor: '#ef4444', borderRadius: 12, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6 }, 
+  orderBadge: { 
+    backgroundColor: '#ef4444', 
+    borderRadius: 12, 
+    minWidth: 20, 
+    height: 20, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    paddingHorizontal: 6 
+  }, 
   orderBadgeText: { fontSize: 10, fontWeight: 'bold', color: '#fff' },
-  sidebarFooter: { padding: 25, borderTopWidth: 1, borderTopColor: '#e5e7eb', backgroundColor: '#f8fafc' }, 
-  logoutButton: { flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: '#fef2f2', borderRadius: 10, borderWidth: 1, borderColor: '#fecaca' },
+  sidebarFooter: { 
+    padding: 25, 
+    borderTopWidth: 1, 
+    borderTopColor: '#e5e7eb', 
+    backgroundColor: '#f8fafc' 
+  }, 
+  logoutButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 12, 
+    backgroundColor: '#fef2f2', 
+    borderRadius: 10, 
+    borderWidth: 1, 
+    borderColor: '#fecaca' 
+  },
   logoutIcon: { fontSize: 16, marginRight: 12 }, 
   logoutText: { fontSize: 15, color: '#dc2626', fontWeight: '600' },
-  searchContainer: { padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' }, 
-  searchInputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, paddingHorizontal: 12 },
+  searchContainer: { 
+    padding: 16, 
+    backgroundColor: '#fff', 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#e2e8f0' 
+  }, 
+  searchInputContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#f8fafc', 
+    borderWidth: 1, 
+    borderColor: '#e2e8f0', 
+    borderRadius: 12, 
+    paddingHorizontal: 12 
+  },
   searchIcon: { fontSize: 16, color: '#64748b', marginRight: 8 }, 
   searchInput: { flex: 1, height: 44, fontSize: 14, color: '#1e293b' }, 
   clearSearchButton: { padding: 8 }, 
   clearSearchText: { fontSize: 16, color: '#64748b', fontWeight: 'bold' },
-  statsContainer: { flexDirection: 'row', padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' }, 
-  statCard: { flex: 1, alignItems: 'center', padding: 12, backgroundColor: '#f8fafc', marginHorizontal: 4, borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0' },
+  statsContainer: { 
+    flexDirection: 'row', 
+    padding: 16, 
+    backgroundColor: '#fff', 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#e2e8f0' 
+  }, 
+  statCard: { 
+    flex: 1, 
+    alignItems: 'center', 
+    padding: 12, 
+    backgroundColor: '#f8fafc', 
+    marginHorizontal: 4, 
+    borderRadius: 12, 
+    borderWidth: 1, 
+    borderColor: '#e2e8f0' 
+  },
   statNumber: { fontSize: 20, fontWeight: 'bold', color: '#059669' }, 
   statLabel: { fontSize: 12, color: '#64748b', marginTop: 4, textAlign: 'center' },
   section: { flex: 1, padding: 16 }, 
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }, 
+  sectionHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 16 
+  }, 
   sectionHeaderRight: { alignItems: 'flex-end' },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1e293b' }, 
   ordersCount: { fontSize: 14, color: '#64748b', fontWeight: '600' }, 
   searchResultsText: { fontSize: 12, color: '#059669', marginBottom: 2 },
-  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }, 
+  centerContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    padding: 20 
+  }, 
   loadingText: { marginTop: 12, color: '#64748b', fontSize: 14, textAlign: 'center' },
   emptyState: { alignItems: 'center', justifyContent: 'center', padding: 40 }, 
-  emptyStateTitle: { fontSize: 18, fontWeight: 'bold', color: '#64748b', marginBottom: 8, textAlign: 'center' },
-  emptyStateText: { fontSize: 14, color: '#94a3b8', textAlign: 'center', marginBottom: 20, lineHeight: 20 }, 
-  emptyStateButton: { backgroundColor: '#059669', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8 }, 
+  emptyStateTitle: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: '#64748b', 
+    marginBottom: 8, 
+    textAlign: 'center' 
+  },
+  emptyStateText: { 
+    fontSize: 14, 
+    color: '#94a3b8', 
+    textAlign: 'center', 
+    marginBottom: 20, 
+    lineHeight: 20 
+  }, 
+  emptyStateButton: { 
+    backgroundColor: '#059669', 
+    paddingHorizontal: 20, 
+    paddingVertical: 12, 
+    borderRadius: 8 
+  }, 
   emptyStateButtonText: { color: '#fff', fontWeight: '600' },
   ordersList: { paddingBottom: 20 }, 
-  orderCard: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 2 },
-  orderHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }, 
+  orderCard: { 
+    backgroundColor: '#fff', 
+    borderRadius: 12, 
+    padding: 16, 
+    marginBottom: 12, 
+    borderWidth: 1, 
+    borderColor: '#e2e8f0', 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 1 }, 
+    shadowOpacity: 0.1, 
+    shadowRadius: 3, 
+    elevation: 2 
+  },
+  orderHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'flex-start', 
+    marginBottom: 12 
+  }, 
   orderId: { fontSize: 14, fontWeight: '600', color: '#475569', marginBottom: 4 }, 
-  productName: { fontSize: 16, fontWeight: 'bold', color: '#1e293b', flex: 1, marginRight: 10 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, minWidth: 70, alignItems: 'center' }, 
+  productName: { 
+    fontSize: 16, 
+    fontWeight: 'bold', 
+    color: '#1e293b', 
+    flex: 1, 
+    marginRight: 10 
+  },
+  statusBadge: { 
+    paddingHorizontal: 8, 
+    paddingVertical: 4, 
+    borderRadius: 12, 
+    minWidth: 70, 
+    alignItems: 'center' 
+  }, 
   statusText: { fontSize: 12, fontWeight: '600', color: '#fff', textAlign: 'center' },
   orderDetails: { marginBottom: 12 }, 
   quantity: { fontSize: 14, color: '#475569', marginBottom: 4 }, 
   bold: { fontWeight: '600' }, 
-  customerInfo: { flexDirection: 'row', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap' },
+  customerInfo: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginBottom: 4, 
+    flexWrap: 'wrap' 
+  },
   customerLabel: { fontSize: 14, color: '#64748b', marginRight: 4 }, 
   customerName: { fontSize: 14, fontWeight: '600', color: '#475569', flex: 1 }, 
   price: { fontSize: 14, fontWeight: 'bold', color: '#059669', marginBottom: 4 }, 
   paymentStatus: { fontSize: 12, fontWeight: '600', marginBottom: 4 },
   orderDate: { fontSize: 12, color: '#94a3b8' },
-  actionButtons: { flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap' }, 
-  actionButton: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 6, alignItems: 'center', minWidth: 80, flex: 1 }, 
+  actionButtons: { 
+    flexDirection: 'row', 
+    gap: 8, 
+    alignItems: 'center', 
+    flexWrap: 'wrap' 
+  }, 
+  actionButton: { 
+    paddingVertical: 10, 
+    paddingHorizontal: 12, 
+    borderRadius: 6, 
+    alignItems: 'center', 
+    minWidth: 80, 
+    flex: 1 
+  }, 
   actionButtonText: { fontSize: 12, fontWeight: '600', color: '#fff', textAlign: 'center' },
   approveButton: { backgroundColor: '#10b981' }, 
   rejectButton: { backgroundColor: '#ef4444' }, 
@@ -903,12 +1355,45 @@ const styles = StyleSheet.create({
   paymentButton: { backgroundColor: '#f59e0b' },
   confirmPaymentButton: { backgroundColor: '#10b981' },
   confirmReceiptButton: { backgroundColor: '#22c55e' },
-  paymentPendingText: { fontSize: 12, fontWeight: '600', color: '#f59e0b', textAlign: 'center', flex: 1 },
-  paymentApprovedText: { fontSize: 12, fontWeight: '600', color: '#22c55e', textAlign: 'center', flex: 1 },
-  paymentPaidText: { fontSize: 12, fontWeight: '600', color: '#10b981', textAlign: 'center', flex: 1 },
-  paymentReceivedText: { fontSize: 12, fontWeight: '600', color: '#059669', textAlign: 'center', flex: 1 },
+  paymentPendingText: { 
+    fontSize: 12, 
+    fontWeight: '600', 
+    color: '#f59e0b', 
+    textAlign: 'center', 
+    flex: 1 
+  },
+  paymentApprovedText: { 
+    fontSize: 12, 
+    fontWeight: '600', 
+    color: '#22c55e', 
+    textAlign: 'center', 
+    flex: 1 
+  },
+  paymentPaidText: { 
+    fontSize: 12, 
+    fontWeight: '600', 
+    color: '#10b981', 
+    textAlign: 'center', 
+    flex: 1 
+  },
+  paymentReceivedText: { 
+    fontSize: 12, 
+    fontWeight: '600', 
+    color: '#059669', 
+    textAlign: 'center', 
+    flex: 1 
+  },
   modalContainer: { flex: 1, backgroundColor: '#f8fafc' }, 
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 60, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
+  modalHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    padding: 20, 
+    paddingTop: 60, 
+    backgroundColor: '#fff', 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#e2e8f0' 
+  },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1e293b' }, 
   closeButton: { padding: 8 }, 
   closeButtonText: { fontSize: 20, color: '#64748b' }, 
@@ -918,16 +1403,66 @@ const styles = StyleSheet.create({
   detailValue: { fontSize: 16, color: '#1e293b', marginBottom: 2 }, 
   detailSubtext: { fontSize: 14, color: '#94a3b8' },
   totalAmount: { fontSize: 18, fontWeight: 'bold', color: '#059669' },
-  notesText: { fontSize: 14, color: '#6366f1', fontStyle: 'italic', backgroundColor: '#f0f9ff', padding: 12, borderRadius: 6, lineHeight: 20 }, 
+  notesText: { 
+    fontSize: 14, 
+    color: '#6366f1', 
+    fontStyle: 'italic', 
+    backgroundColor: '#f0f9ff', 
+    padding: 12, 
+    borderRadius: 6, 
+    lineHeight: 20 
+  }, 
   detailActions: { marginTop: 20, marginBottom: 30 },
-  confirmationModal: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)', padding: 20 }, 
-  confirmationContent: { backgroundColor: '#fff', borderRadius: 12, padding: 24, width: '100%', maxWidth: 400 },
-  confirmationTitle: { fontSize: 20, fontWeight: 'bold', color: '#1e293b', marginBottom: 8, textAlign: 'center' }, 
-  confirmationText: { fontSize: 16, color: '#64748b', marginBottom: 20, textAlign: 'center', lineHeight: 22 },
-  deliverySummary: { backgroundColor: '#f8fafc', padding: 16, borderRadius: 8, marginBottom: 20 }, 
+  confirmationModal: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', 
+    padding: 20 
+  }, 
+  confirmationContent: { 
+    backgroundColor: '#fff', 
+    borderRadius: 12, 
+    padding: 24, 
+    width: '100%', 
+    maxWidth: 400 
+  },
+  confirmationTitle: { 
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    color: '#1e293b', 
+    marginBottom: 8, 
+    textAlign: 'center' 
+  }, 
+  confirmationText: { 
+    fontSize: 16, 
+    color: '#64748b', 
+    marginBottom: 20, 
+    textAlign: 'center', 
+    lineHeight: 22 
+  },
+  deliverySummary: { 
+    backgroundColor: '#f8fafc', 
+    padding: 16, 
+    borderRadius: 8, 
+    marginBottom: 20 
+  }, 
   deliveryItem: { fontSize: 14, color: '#475569', marginBottom: 4, lineHeight: 20 },
-  paymentConfirmationSummary: { backgroundColor: '#f0f9ff', padding: 16, borderRadius: 8, marginBottom: 20, borderWidth: 1, borderColor: '#0ea5e9' },
-  paymentConfirmationItem: { fontSize: 14, color: '#0369a1', marginBottom: 4, lineHeight: 20, fontWeight: '500' },
+  paymentConfirmationSummary: { 
+    backgroundColor: '#f0f9ff', 
+    padding: 16, 
+    borderRadius: 8, 
+    marginBottom: 20, 
+    borderWidth: 1, 
+    borderColor: '#0ea5e9' 
+  },
+  paymentConfirmationItem: { 
+    fontSize: 14, 
+    color: '#0369a1', 
+    marginBottom: 4, 
+    lineHeight: 20, 
+    fontWeight: '500' 
+  },
   confirmationButtons: { flexDirection: 'row', gap: 12 }, 
   confirmationButton: { flex: 1, height: 48, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
   cancelButton: { backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#e2e8f0' }, 
@@ -937,16 +1472,37 @@ const styles = StyleSheet.create({
   cancelButtonText: { color: '#64748b', fontWeight: '600' }, 
   confirmButtonText: { color: '#fff', fontWeight: '600' },
   // Payment Modal Styles
-  paymentSummary: { backgroundColor: '#f0f9ff', padding: 16, borderRadius: 8, marginBottom: 20, borderWidth: 1, borderColor: '#0ea5e9' }, 
+  paymentSummary: { 
+    backgroundColor: '#f0f9ff', 
+    padding: 16, 
+    borderRadius: 8, 
+    marginBottom: 20, 
+    borderWidth: 1, 
+    borderColor: '#0ea5e9' 
+  }, 
   paymentSummaryTitle: { fontSize: 16, fontWeight: 'bold', color: '#0369a1', marginBottom: 12 },
   paymentDetailRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }, 
   paymentDetailLabel: { fontSize: 14, color: '#64748b' }, 
   paymentDetailValue: { fontSize: 14, fontWeight: '600', color: '#374151' },
-  paymentWarning: { backgroundColor: '#fef3c7', padding: 12, borderRadius: 6, marginTop: 8, borderWidth: 1, borderColor: '#f59e0b' },
+  paymentWarning: { 
+    backgroundColor: '#fef3c7', 
+    padding: 12, 
+    borderRadius: 6, 
+    marginTop: 8, 
+    borderWidth: 1, 
+    borderColor: '#f59e0b' 
+  },
   paymentWarningText: { fontSize: 12, color: '#92400e', fontWeight: '500', textAlign: 'center' },
   formSection: { marginBottom: 20 }, 
   label: { fontSize: 16, fontWeight: '600', color: '#374151', marginBottom: 8 }, 
-  input: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#fff' },
+  input: { 
+    borderWidth: 1, 
+    borderColor: '#d1d5db', 
+    borderRadius: 8, 
+    padding: 12, 
+    fontSize: 16, 
+    backgroundColor: '#fff' 
+  },
   amountHint: { fontSize: 12, color: '#6b7280', marginTop: 4, fontStyle: 'italic' },
   textArea: { height: 80, textAlignVertical: 'top' }, 
   actionButtonsModal: { gap: 12, marginBottom: 30 }, 
